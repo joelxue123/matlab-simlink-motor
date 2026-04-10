@@ -1,0 +1,2 @@
+build_average_inverter_foc_model;
+open_system('average_inverter_foc');

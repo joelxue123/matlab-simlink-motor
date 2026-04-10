@@ -1,0 +1,17 @@
+.DS_Store
+.venv/
+.vscode/
+
+# Simulink generated artifacts
+slprj/
+*_grt_rtw/
+*.autosave
+*.slxc
+
+# Generated lookup/build outputs
+vib_ff_table.mat
+libbaudrate_shim.so
+
+# MATLAB temporary files
+*.asv
+*.mexa64
