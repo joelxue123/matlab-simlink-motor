@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sltp_graph version="1.1" packageUris="http://schema.mathworks.com/mf0/sltp_mm/R2018b_201805251631">
+  <sltp.mm.core.Context type="sltp.mm.core.Context" uuid="425d3e78-726d-4cb5-8a16-56e1e4c193d0">
+    <priorityDirection>HighNumberLast</priorityDirection>
+    <tasks type="sltp.mm.core.Task" uuid="8730c947-2a19-4ab6-8130-a9b0ada0c06c"/>
+    <tasks type="sltp.mm.core.Task" uuid="1e911454-eeea-4b53-9530-b4dd733b0db2"/>
+    <rootTask type="sltp.mm.core.Task" uuid="8730c947-2a19-4ab6-8130-a9b0ada0c06c">
+      <context type="sltp.mm.core.Context" uuid="425d3e78-726d-4cb5-8a16-56e1e4c193d0"/>
+      <explicit>false</explicit>
+      <name>Default</name>
+      <priority>-2147483648</priority>
+      <subgraph type="sltp.mm.core.Graph" uuid="f209a388-bc14-482f-858b-e2c916a18247">
+        <tasks type="sltp.mm.core.Task" uuid="1e911454-eeea-4b53-9530-b4dd733b0db2">
+          <baseTask>true</baseTask>
+          <context type="sltp.mm.core.Context" uuid="425d3e78-726d-4cb5-8a16-56e1e4c193d0"/>
+          <explicit>false</explicit>
+          <id>1</id>
+          <name>Cont</name>
+          <priority>40</priority>
+          <rates type="sltp.mm.core.Rate" uuid="7880be78-e384-40f3-b3df-e29349e1ba32">
+            <color>255</color>
+            <rateSpec type="sltp.mm.core.RateSpec">
+              <period>0</period>
+            </rateSpec>
+            <sti>-1</sti>
+          </rates>
+        </tasks>
+      </subgraph>
+    </rootTask>
+  </sltp.mm.core.Context>
+</sltp_graph>
