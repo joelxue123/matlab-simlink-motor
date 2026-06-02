@@ -1,0 +1,2 @@
+case_name,ref_axis,ref_waveform,tuning_method,requested_current_bandwidth_hz,current_bandwidth_hz,effective_current_bandwidth_hz,current_delay_us,kp,ki,rise_time_s,settling_time_s,overshoot_a,steady_state_error_a,rmse_a,max_abs_cross_axis_a,voltage_utilization,max_abs_speed_rad_s
+bw_800Hz,id,square,bandwidth,800,800,800,75,9.0477868423386,1759.29188601028,0.0003,0.0015,0.0543723676736936,-0.0135819034917062,0.279758119870267,0,0.621038188102582,0

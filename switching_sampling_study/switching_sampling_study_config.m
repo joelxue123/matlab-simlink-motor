@@ -12,7 +12,7 @@ ss_cfg.T_pwm = 1 / ss_cfg.f_pwm;
 ss_cfg.dead_time_s = 100e-9;
 
 % Reference settings
-ss_cfg.modulation_ratio = 0.95;
+ss_cfg.modulation_ratio = 0.1;
 ss_cfg.electrical_freq_hz = 80;
 ss_cfg.theta_e_deg = 60;
 ss_cfg.samples_per_pwm_model = 4000;
@@ -22,10 +22,10 @@ ss_cfg.sim_stop_time = 2 * ss_cfg.T_pwm;
 ss_cfg.adc_settle_time_s = 1.0e-6;
 ss_cfg.adc_trigger_offset_s = 2.0e-6;
 ss_cfg.min_valid_window_s = 2.5e-6;
-ss_cfg.duty_sample_limit = 0.70;
+ss_cfg.duty_sample_limit = 0.95;
 
 % RL-load study settings
-ss_cfg.rl_load_R_ohm = 0.30;
+ss_cfg.rl_load_R_ohm = 10;
 ss_cfg.rl_load_L_h = 200e-6;
 ss_cfg.rl_study_periods = 40;
 ss_cfg.rl_rotating_cycles = 1;

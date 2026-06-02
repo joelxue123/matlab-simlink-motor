@@ -1,3 +1,4 @@
+
 function build_vibration_comp_test()
 % Build a vibration-compensation test model with periodic compressor-like load.
 %

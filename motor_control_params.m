@@ -78,12 +78,36 @@ control.speed_ref_filter_tau = 1 / (2 * pi * control.speed_bandwidth_hz);  % 参
 simcfg.Ts_pos = 1e-3;                % 位置环步长 (1ms)
 control.pos_ref_rad = 2*pi;          % 位置指令 (rad, 机械角)
 control.pos_step_time = 0.01;        % 位置阶跃时间 (s)
+control.pos_ref_mode = 'step';       % 'step' | 'chirp' | 'sine'
+control.pos_use_planner = false;      % true: 位置阶跃先经过轨迹规划, false: 直接位置步进
+control.pos_chirp.amplitude_rad = deg2rad(2.0);
+control.pos_chirp.f0_hz = 0.2;
+control.pos_chirp.f1_hz = 25.0;
+control.pos_chirp.start_time = 0.05;
+control.pos_chirp.duration = 8.0;
+control.pos_chirp.offset_rad = 0.0;
+control.pos_sine.amplitude_rad = deg2rad(1.0);
+control.pos_sine.freq_hz = 1.0;
+control.pos_sine.start_time = 0.05;
+control.pos_sine.offset_rad = 0.0;
+control.pos_scan.start_time = 0.05;
+control.pos_scan.hold_time = 0.04;
+control.pos_scan.points = 180;
+control.pos_scan.theta_table = zeros(360, 1);
 % 位置环带宽 ≤ 速度环带宽 / 3~5
 control.pos_bandwidth_hz = control.speed_bandwidth_hz / 4;
 control.pos_bandwidth_rad_s = 2 * pi * control.pos_bandwidth_hz;
+control.pos_controller_mode = 'pid_reg3';
 % P 控制器: Kp_pos = ωn_pos, 输出为速度指令 (rad/s)
 control.pi_pos.Kp = control.pos_bandwidth_rad_s;
-control.pi_pos.output_limit = motor.speed_ref_mech_rad_s * 1.5;  % 速度限幅
+control.pi_pos.output_limit = motor.speed_ref_mech_rad_s * 1;  % 速度限幅
+% PIDREG3 位置控制器: 输出为机械角速度指令 (rad/s)
+control.pid_pos.damping = 1.0;
+control.pid_pos.Kp = 2 * control.pid_pos.damping * control.pos_bandwidth_rad_s;
+control.pid_pos.Ki_cont = 0;
+control.pid_pos.Ki = 0;
+control.pid_pos.Kc = 0.5;
+control.pid_pos.output_limit = control.pi_pos.output_limit;
 % 梯形速度规划参数 (限速/限加速度, 消除阶跃导致的超调)
 control.pos_max_vel = motor.speed_ref_mech_rad_s;      % 最大速度 (rad/s)
 control.pos_max_acc = control.pos_max_vel / 0.02;      % 最大加速度 (20ms 加速到满速)
@@ -110,13 +134,7 @@ control.vib.ff_enable_time = 0.55;
 control.vib.test_stop_time = 1.0;
 control.vib.ff_table = zeros(360, 1);
 control.vib.ff_table_file = 'vib_ff_table.mat';
-control.vib.load_base_torque = 0.10;
-control.vib.load_amp1 = 0.18;
-control.vib.load_harmonic1 = 1;
-control.vib.load_phase1_deg = 0;
-control.vib.load_amp2 = 0.05;
-control.vib.load_harmonic2 = 2;
-control.vib.load_phase2_deg = 45;
+control = apply_cogging_load_config(control, cogging_load_config);
 
 %% Feedforward and decoupling
 control.enable_decoupling = true;
@@ -129,6 +147,7 @@ control.vq_decoupling = @(id, iq, omega_e) omega_e * (motor.Ld * id + motor.psi_
 control.speed_ramp_time = 0.05;
 control.load_step_time = 0.2;
 control.load_step_torque = 0.0;
+control.use_periodic_load = false;
 
 %% Notes for Simulink mapping
 % motor.*      -> motor plant block or mask parameters

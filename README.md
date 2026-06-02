@@ -1,5 +1,135 @@
 # average-inverter 电机控制起步说明
 
+## 建议的新组织方式
+
+这个项目现在已经开始按“公共库 + 独立实验目录”来整理。
+
+新的入口建议优先从 `studies/` 下使用，而不是继续直接在根目录运行实验脚本：
+
+```matlab
+cd studies/cogging_position_scan
+result = run_study;
+```
+
+这样做有两个直接好处：
+
+- 每个算法验证都有自己的子目录
+- 生成的 `mat/csv/txt` 默认落在各自 `outputs/`，不会继续堆在根目录
+
+当前已经整理出的实验入口有：
+
+- `studies/cogging_position_scan/`
+- `studies/cogging_torque_comp/`
+- `studies/vibration_comp/`
+
+架构说明见：`docs/architecture.md`
+
+运行方法见：`docs/how-to-run.md`
+
+`.m` 文件索引见：`docs/m-file-index.md`
+
+## 快速开始
+
+这个仓库当前有 3 条最实用的入口。
+
+如果你想单独研究传递函数零点对瞬态响应的影响，也可以直接运行：
+
+```matlab
+cd zero_response_study
+run_zero_transient_study
+```
+
+### 1. 生成并打开主 FOC 模型
+
+```matlab
+motor_control_params;
+build_model_and_open;
+```
+
+### 2. 运行振动补偿效果展示
+
+```matlab
+show_vibration_comp_effect;
+```
+
+这个脚本会自动完成：
+
+- 基线工况仿真
+- 离线学习 `ff_table`
+- 离线补偿仿真
+- 对比速度纹波和补偿电流
+
+### 2.1 运行齿槽转矩补偿研究入口
+
+```matlab
+result = run_cogging_torque_comp_study;
+```
+
+这个脚本会把当前的角度同步补偿框架切到更接近齿槽转矩的高阶机械角扰动场景，并自动完成：
+
+- baseline 仿真
+- 离线学习 `cogging_ff_table.mat`
+- offline FF 补偿仿真
+- 对比补偿前后速度纹波
+
+### 2.2 运行位控扫描建表入口
+
+```matlab
+result = run_cogging_position_scan_study;
+```
+
+这个脚本会：
+
+- 用位置环正反向扫描机械角
+- 从稳态 `iq_ref` / `iq_meas` 提取齿槽前馈表
+- 保存 `cogging_scan_ff_table.mat`
+- 再回到恒速扰动测试里验证补偿效果
+
+### 2.3 运行扫描到验证的一键复现脚本
+
+```matlab
+result = reproduce_position_scan_validation;
+```
+
+这个脚本固定一组轻量参数，自动完成：
+
+- 清理旧的扫描/验证结果变量
+- 运行位置扫描 Simulink 仿真
+- 调用 `save_position_scan_iq_table` 提取扫描结果
+- 调用 `validate_position_scan_ff_table` 做 offline FF 验证
+- 检查扫描阶段扰动参数与验证阶段配置是否一致
+- 导出 `validated_scan_ff_table.csv` 和 `validated_scan_ff_table.txt`
+
+### 3. 单独学习离线补偿表
+
+```matlab
+table_info = learn_vibration_ff_table;
+```
+
+输出的表会保存到 `control.vib.ff_table_file`，默认用于后续 offline 模式补偿。
+
+## 主要脚本
+
+- `build_average_inverter_foc_model.m`：生成主 average-inverter FOC 模型
+- `build_vibration_comp_test.m`：生成振动补偿测试模型
+- `learn_vibration_ff_table.m`：从 baseline 日志离线学习角度同步补偿表
+- `evaluate_vibration_comp_test.m`：计算补偿前后纹波指标
+- `show_vibration_comp_effect.m`：一键展示 baseline 与 offline FF 的效果
+- `run_cogging_torque_comp_study.m`：用高阶机械角谐波研究齿槽转矩补偿
+- `run_cogging_position_scan_study.m`：用位控正反向扫描生成齿槽前馈表并验证效果
+- `estimate_speedloop_bandwidth.m`：估算当前速度环等效带宽
+- `zero_response_study/run_zero_transient_study.m`：固定极点、扫零点位置，比较阶跃瞬态
+
+## 齿槽转矩补偿与现有模块的关系
+
+当前目录里虽然命名为 `vibration_comp`，但从控制结构上看，它本质上是机械角同步的周期扰动补偿：
+
+- 按 `theta_meas` 分桶学习或查表
+- 输出 `iq_ff`
+- 叠加到 `iq_ref_base`
+
+因此它可以直接用来研究 cogging torque compensation。当前默认测试模型里的 `Periodic Load` 由机械角谐波合成，切换谐波阶次后就可以近似模拟齿槽转矩。
+
 这个目录现在是一个最小控制骨架，适合用 average-inverter 模型先把表贴式永磁同步电机控制器跑通，再决定是否切到开关级逆变器。
 
 ## 适用场景

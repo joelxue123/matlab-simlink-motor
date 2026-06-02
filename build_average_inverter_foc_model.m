@@ -33,45 +33,88 @@ script_dir = fileparts(mfilename('fullpath'));
 addpath(fullfile(script_dir, 'build_modules'));
 addpath(fullfile(script_dir, 'algorithms'));
 
+control_cfg = evalin('base', 'control');
+
 % =====================================================================
 % Row 0: Position reference generation  (runs at position-loop rate)
 % =====================================================================
 y = 50;
-add_block('simulink/Sources/Step', [mdl '/PosRefStep'], ...
-    'Position', [50 y 100 y+30], ...
-    'Time', 'control.pos_step_time', 'Before', '0', 'After', 'control.pos_ref_rad', ...
-    'SampleTime', 'simcfg.Ts_pos');
+if isfield(control_cfg, 'pos_ref_mode') && strcmpi(control_cfg.pos_ref_mode, 'chirp')
+    create_subsystem(mdl, 'PosRefChirp', [40 y-5 320 y+95], ...
+        {'t_now'}, {'pos_ref'});
+    populate_position_chirp_ref(mdl);
+    add_block('simulink/Sources/Clock', [mdl '/Clock_pos_ref'], ...
+        'Position', [20 y+20 50 y+40]);
+    add_line(mdl, 'Clock_pos_ref/1', 'PosRefChirp/1');
+    add_goto(mdl, 'pos_ref', [350 y+20 430 y+50], 'PosRefChirp/1');
+elseif isfield(control_cfg, 'pos_ref_mode') && strcmpi(control_cfg.pos_ref_mode, 'sine')
+    create_subsystem(mdl, 'PosRefSine', [40 y-5 320 y+95], ...
+        {'t_now'}, {'pos_ref'});
+    populate_position_sine_ref(mdl);
+    add_block('simulink/Sources/Clock', [mdl '/Clock_pos_ref'], ...
+        'Position', [20 y+20 50 y+40]);
+    add_line(mdl, 'Clock_pos_ref/1', 'PosRefSine/1');
+    add_goto(mdl, 'pos_ref', [350 y+20 430 y+50], 'PosRefSine/1');
+elseif isfield(control_cfg, 'pos_ref_mode') && strcmpi(control_cfg.pos_ref_mode, 'scan_table')
+    create_subsystem(mdl, 'PosRefScan', [40 y-5 320 y+95], ...
+        {'t_now'}, {'pos_ref'});
+    populate_position_scan_ref(mdl);
+    add_block('simulink/Sources/Clock', [mdl '/Clock_pos_ref'], ...
+        'Position', [20 y+20 50 y+40]);
+    add_line(mdl, 'Clock_pos_ref/1', 'PosRefScan/1');
+    add_goto(mdl, 'pos_ref', [350 y+20 430 y+50], 'PosRefScan/1');
+else
+    add_block('simulink/Sources/Step', [mdl '/PosRefStep'], ...
+        'Position', [50 y 100 y+30], ...
+        'Time', 'control.pos_step_time', 'Before', '0', 'After', 'control.pos_ref_rad', ...
+        'SampleTime', 'simcfg.Ts_pos');
 
-% 梯形速度规划: 限速+限加速度, 平滑位置指令
-add_block('simulink/User-Defined Functions/MATLAB Function', [mdl '/TrajPlanner'], ...
-    'Position', [140 y-5 260 y+35]);
-populate_traj_planner(mdl);
+if ~isfield(control_cfg, 'pos_use_planner') || control_cfg.pos_use_planner
+    % 梯形速度规划: 限速+限加速度, 平滑位置指令
+    add_block('simulink/User-Defined Functions/MATLAB Function', [mdl '/TrajPlanner'], ...
+        'Position', [140 y-5 260 y+35]);
+    populate_traj_planner(mdl);
 
-add_block('simulink/Sources/Constant', [mdl '/TrajParams'], ...
-    'Position', [50 y+40 230 y+60], ...
-    'Value', '[control.pos_max_vel, control.pos_max_acc, simcfg.Ts_pos]');
-add_line(mdl, 'PosRefStep/1', 'TrajPlanner/1');
-add_line(mdl, 'TrajParams/1', 'TrajPlanner/2');
-add_goto(mdl, 'pos_ref', [290 y 370 y+30], 'TrajPlanner/1');
+    add_block('simulink/Sources/Constant', [mdl '/TrajParams'], ...
+        'Position', [50 y+40 230 y+60], ...
+        'Value', '[control.pos_max_vel, control.pos_max_acc, simcfg.Ts_pos]');
+    add_line(mdl, 'PosRefStep/1', 'TrajPlanner/1');
+    add_line(mdl, 'TrajParams/1', 'TrajPlanner/2');
+    add_goto(mdl, 'pos_ref', [290 y 370 y+30], 'TrajPlanner/1');
+else
+    add_goto(mdl, 'pos_ref', [140 y 220 y+30], 'PosRefStep/1');
+end
+end
 
 % =====================================================================
-% Row 1: Position P controller  (position-loop rate: Ts_pos)
+% Row 1: Position controller  (position-loop rate: Ts_pos)
 %   Rate Transition: theta_meas (Ts_plant) → Ts_pos
 % =====================================================================
 y = 130;
 add_block('simulink/Signal Attributes/Rate Transition', [mdl '/RT_theta_to_pos'], ...
     'Position', [20 y+40 70 y+60], ...
     'OutPortSampleTime', 'simcfg.Ts_pos');
-create_subsystem(mdl, 'Position P', [100 y 260 y+80], ...
-    {'pos_ref', 'theta_meas'}, {'w_ref'});
-populate_position_p(mdl);
+if isfield(control_cfg, 'pos_controller_mode') && strcmpi(control_cfg.pos_controller_mode, 'pid_reg3')
+    pos_ctrl_name = 'Position PID';
+    create_subsystem(mdl, pos_ctrl_name, [100 y 300 y+95], ...
+        {'pos_ref', 'theta_meas'}, {'w_ref', 'ui_pos'});
+    populate_position_pidreg3(mdl);
+else
+    pos_ctrl_name = 'Position P';
+    create_subsystem(mdl, pos_ctrl_name, [100 y 260 y+80], ...
+        {'pos_ref', 'theta_meas'}, {'w_ref'});
+    populate_position_p(mdl);
+end
 add_from(mdl, 'pos_ref',  [20 y+10  70 y+30]);
 add_from(mdl, 'theta_meas_pos', [20-80 y+40 20-30 y+60]);
 set_param([mdl '/From_theta_meas_pos'], 'GotoTag', 'theta_meas');
 add_line(mdl, 'From_theta_meas_pos/1', 'RT_theta_to_pos/1');
-add_line(mdl, 'From_pos_ref/1',   'Position P/1');
-add_line(mdl, 'RT_theta_to_pos/1', 'Position P/2');
-add_goto(mdl, 'w_ref_pos', [300 y+20 380 y+50], 'Position P/1');
+add_line(mdl, 'From_pos_ref/1', [pos_ctrl_name '/1']);
+add_line(mdl, 'RT_theta_to_pos/1', [pos_ctrl_name '/2']);
+add_goto(mdl, 'w_ref_pos', [320 y+20 400 y+50], [pos_ctrl_name '/1']);
+if strcmp(pos_ctrl_name, 'Position PID')
+    add_goto(mdl, 'ui_pos', [320 y+60 400 y+90], [pos_ctrl_name '/2']);
+end
 
 % Rate Transition: w_ref (Ts_pos) → Ts_speed
 add_block('simulink/Signal Attributes/Rate Transition', [mdl '/RT_wref_to_speed'], ...
@@ -253,13 +296,28 @@ add_goto(mdl, 'Vabc_out', [560 y+20 640 y+45], 'Average Inverter/1');
 y = 1200;
 add_from(mdl, 'T_load',   [20 y     70 y+20]);
 add_from(mdl, 'Vabc_out', [20 y+60  70 y+80]);
-add_block('simulink/Sources/Step', [mdl '/LoadStep'], ...
-    'Position', [100 y-5 150 y+25], ...
-    'Time', 'control.load_step_time', ...
-    'Before', 'motor.load_torque', ...
-    'After', 'control.load_step_torque', ...
-    'SampleTime', 'simcfg.Ts_plant');
-add_goto(mdl, 'T_load', [190 y 260 y+20], 'LoadStep/1');
+if isfield(control_cfg, 'use_periodic_load') && control_cfg.use_periodic_load
+    add_from(mdl, 'theta_meas_load', [20 y-45 70 y-25]);
+    set_param([mdl '/From_theta_meas_load'], 'GotoTag', 'theta_meas');
+    add_block('simulink/Discrete/Unit Delay', [mdl '/UD_theta_load'], ...
+        'Position', [100 y-45 150 y-25], ...
+        'InitialCondition', '0', ...
+        'SampleTime', 'simcfg.Ts_plant');
+    add_line(mdl, 'From_theta_meas_load/1', 'UD_theta_load/1');
+    create_subsystem(mdl, 'Periodic Load', [190 y-55 390 y+25], ...
+        {'theta_meas'}, {'T_load'});
+    populate_periodic_load(mdl);
+    add_line(mdl, 'UD_theta_load/1', 'Periodic Load/1');
+    add_goto(mdl, 'T_load', [420 y 490 y+20], 'Periodic Load/1');
+else
+    add_block('simulink/Sources/Step', [mdl '/LoadStep'], ...
+        'Position', [100 y-5 150 y+25], ...
+        'Time', 'control.load_step_time', ...
+        'Before', 'motor.load_torque', ...
+        'After', 'control.load_step_torque', ...
+        'SampleTime', 'simcfg.Ts_plant');
+    add_goto(mdl, 'T_load', [190 y 260 y+20], 'LoadStep/1');
+end
 
 add_block('mcblib/Electrical Systems/Motors/Surface Mount PMSM', ...
     [mdl '/Surface Mount PMSM'], 'Position', [100 y+40 310 y+200]);
@@ -380,23 +438,66 @@ add_from(mdl, 'w_kf_log', [20 y+150 70 y+170]);
 set_param([mdl '/From_w_kf_log'], 'GotoTag', 'w_kf');
 add_line(mdl, 'From_w_kf_log/1', 'Log_wkf/1');
 
+add_block('simulink/Sinks/To Workspace', [mdl '/Log_wref'], ...
+    'Position', [120 y+180 190 y+205], ...
+    'VariableName', 'log_wref', 'SaveFormat', 'Timeseries');
+add_from(mdl, 'w_ref_log', [20 y+180 70 y+200]);
+set_param([mdl '/From_w_ref_log'], 'GotoTag', 'w_ref');
+add_line(mdl, 'From_w_ref_log/1', 'Log_wref/1');
+
+add_block('simulink/Sinks/To Workspace', [mdl '/Log_iq_ref'], ...
+    'Position', [120 y+210 190 y+235], ...
+    'VariableName', 'log_iq_ref', 'SaveFormat', 'Timeseries');
+add_from(mdl, 'iq_ref_log', [20 y+210 70 y+230]);
+set_param([mdl '/From_iq_ref_log'], 'GotoTag', 'iq_ref');
+add_line(mdl, 'From_iq_ref_log/1', 'Log_iq_ref/1');
+
+add_block('simulink/Sinks/To Workspace', [mdl '/Log_iq_meas'], ...
+    'Position', [120 y+240 190 y+265], ...
+    'VariableName', 'log_iq_meas', 'SaveFormat', 'Timeseries');
+add_from(mdl, 'iq_meas_log', [20 y+240 70 y+260]);
+set_param([mdl '/From_iq_meas_log'], 'GotoTag', 'iq_meas');
+add_line(mdl, 'From_iq_meas_log/1', 'Log_iq_meas/1');
+
+if isfield(control_cfg, 'pos_controller_mode') && strcmpi(control_cfg.pos_controller_mode, 'pid_reg3')
+    add_from(mdl, 'ui_pos_scope', [20 y+280 70 y+300]);
+    set_param([mdl '/From_ui_pos_scope'], 'GotoTag', 'ui_pos');
+    add_block('simulink/Sinks/Scope', [mdl '/Position Ui Scope'], ...
+        'Position', [120 y+280 190 y+310], 'NumInputPorts', '1');
+    add_line(mdl, 'From_ui_pos_scope/1', 'Position Ui Scope/1');
+
+    add_block('simulink/Sinks/To Workspace', [mdl '/Log_ui_pos'], ...
+        'Position', [220 y+280 310 y+305], ...
+        'VariableName', 'log_ui_pos', 'SaveFormat', 'Timeseries');
+    add_from(mdl, 'ui_pos_log', [20 y+315 70 y+335]);
+    set_param([mdl '/From_ui_pos_log'], 'GotoTag', 'ui_pos');
+    add_line(mdl, 'From_ui_pos_log/1', 'Log_ui_pos/1');
+end
+
 % Position scope
-add_from(mdl, 'pos_ref_scope', [20 y+170 70 y+190]);
+add_from(mdl, 'pos_ref_scope', [20 y+220 70 y+240]);
 set_param([mdl '/From_pos_ref_scope'], 'GotoTag', 'pos_ref');
-add_from(mdl, 'theta_meas_scope', [20 y+210 70 y+230]);
+add_from(mdl, 'theta_meas_scope', [20 y+260 70 y+280]);
 set_param([mdl '/From_theta_meas_scope'], 'GotoTag', 'theta_meas');
 add_block('simulink/Signal Routing/Mux', [mdl '/Mux_Pos'], ...
-    'Position', [100 y+175 105 y+225], 'Inputs', '2');
+    'Position', [100 y+225 105 y+275], 'Inputs', '2');
 add_line(mdl, 'From_pos_ref_scope/1', 'Mux_Pos/1');
 add_line(mdl, 'From_theta_meas_scope/1', 'Mux_Pos/2');
 add_block('simulink/Sinks/Scope', [mdl '/Position Scope'], ...
-    'Position', [140 y+180 190 y+220], 'NumInputPorts', '1');
+    'Position', [140 y+230 190 y+270], 'NumInputPorts', '1');
 add_line(mdl, 'Mux_Pos/1', 'Position Scope/1');
 
+add_block('simulink/Sinks/To Workspace', [mdl '/Log_pos_ref'], ...
+    'Position', [250 y+220 340 y+245], ...
+    'VariableName', 'log_pos_ref', 'SaveFormat', 'Timeseries');
+add_from(mdl, 'pos_ref_log', [170 y+220 220 y+240]);
+set_param([mdl '/From_pos_ref_log'], 'GotoTag', 'pos_ref');
+add_line(mdl, 'From_pos_ref_log/1', 'Log_pos_ref/1');
+
 add_block('simulink/Sinks/To Workspace', [mdl '/Log_pos'], ...
-    'Position', [250 y+180 320 y+205], ...
+    'Position', [250 y+255 320 y+280], ...
     'VariableName', 'log_pos', 'SaveFormat', 'Timeseries');
-add_from(mdl, 'theta_meas_log', [170 y+180 220 y+200]);
+add_from(mdl, 'theta_meas_log', [170 y+255 220 y+275]);
 set_param([mdl '/From_theta_meas_log'], 'GotoTag', 'theta_meas');
 add_line(mdl, 'From_theta_meas_log/1', 'Log_pos/1');
 
@@ -408,4 +509,7 @@ fprintf('  id_ref, iq_ref, id_meas, iq_meas\n');
 fprintf('  vd_ref, vq_ref, da, db, dc\n');
 fprintf('  ia, ib, ic, Vabc_out, T_load\n');
 fprintf('  w_kf, theta_kf (Kalman estimates)\n');
+if isfield(control_cfg, 'pos_controller_mode') && strcmpi(control_cfg.pos_controller_mode, 'pid_reg3')
+    fprintf('  ui_pos (position-loop integral state)\n');
+end
 end

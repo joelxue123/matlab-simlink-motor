@@ -7,6 +7,8 @@ slprj/
 *_grt_rtw/
 *.autosave
 *.slxc
+average_inverter_foc
+Speed
 
 # Generated lookup/build outputs
 vib_ff_table.mat
