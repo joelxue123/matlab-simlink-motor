@@ -4,6 +4,7 @@
 
 # Simulink generated artifacts
 slprj/
+**/slprj/
 *_grt_rtw/
 *.autosave
 *.slxc
@@ -12,6 +13,9 @@ Speed
 
 # Generated lookup/build outputs
 vib_ff_table.mat
+*.mat
+*.zip
+studies/*/outputs/*.slx
 libbaudrate_shim.so
 
 # MATLAB temporary files

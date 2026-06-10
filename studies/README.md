@@ -21,7 +21,9 @@
 
 - `cogging_position_scan/`：位置扫描建表与验证
 - `cogging_torque_comp/`：齿槽转矩补偿研究
+- `efficiency_iq_bus_current/`：速度环下扫描转速/Iq 与母线电流、效率关系
 - `inertia_identification/`：基于速度环阶跃响应的等效惯量辨识基线
+- `model_following_position_ref/`：模型跟踪位置指令生成与简化轴响应对比
 - `电流环验证/`：电流环 PI 参数算法验证
 - `vibration_comp/`：基础振动补偿展示
 

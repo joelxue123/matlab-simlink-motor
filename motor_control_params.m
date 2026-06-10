@@ -13,22 +13,28 @@ simcfg.Ts_ctrl  = 50e-6;              % 电流环控制步长 (50us)
 simcfg.Ts_speed = 1e-4;               % 速度环控制步长 (100us)
 
 %% Inverter and DC bus
-inverter.Vdc = 48;
+inverter.Vdc = 68;
 inverter.modulation_limit = 0.577 * inverter.Vdc;
 inverter.current_limit = 15;
+inverter.drive_efficiency = 0.95;
 
 %% Surface-mounted PMSM parameters
 motor.type = 'SPMSM';
 motor.topology = 'Surface Mount PMSM';
-motor.pole_pairs = 4;
-motor.Rs = 0.35;
-motor.Ld = 1.8e-3;
-motor.Lq = 1.8e-3;
-motor.psi_f = 0.035;
+motor.pole_pairs = 10;
+motor.back_emf_vrms_per_krpm = 17.03;        % line-line RMS, per mechanical krpm
+motor.line_to_line_resistance = 0.4267;      % ohm, measured phase-to-phase
+motor.line_to_line_inductance = 0.53e-3;     % H, measured phase-to-phase
+motor.Rs = motor.line_to_line_resistance / 2;
+motor.Ld = motor.line_to_line_inductance / 2;
+motor.Lq = motor.Ld;
+motor.psi_f = motor.back_emf_vrms_per_krpm / ...
+    (sqrt(3/2) * motor.pole_pairs * (1000 * 2 * pi / 60));
 motor.J = 2.5e-4;
 motor.B = 1.0e-4;
 motor.load_torque = 0;
 motor.speed_ref_rpm = 400;
+motor.max_speed_rpm = 4900;
 
 %% Base quantities
 motor.speed_ref_mech_rad_s = motor.speed_ref_rpm * 2 * pi / 60;

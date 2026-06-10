@@ -15,6 +15,7 @@
 | `studies/cogging_position_scan/run_study.m` | 实验入口 | 位置扫描建表并验证 | 是 |
 | `studies/cogging_position_scan/reproduce_validation.m` | 实验入口 | 扫描到验证一键复现 | 是 |
 | `studies/cogging_torque_comp/run_study.m` | 实验入口 | 齿槽转矩补偿研究 | 是 |
+| `studies/model_following_position_ref/run_study.m` | 实验入口 | 模型跟踪位置指令生成与简化轴响应对比 | 是 |
 | `studies/vibration_comp/run_effect_demo.m` | 实验入口 | 基础振动补偿效果展示 | 是 |
 | `studies/_template/run_study.m` | 模板 | 新实验模板入口 | 否 |
 
@@ -45,6 +46,7 @@
 | `build_model_and_open.m` | 模型入口 | 生成并打开主 FOC 模型 | 是 |
 | `build_average_inverter_foc_model.m` | 模型构建 | 生成 `average_inverter_foc.slx` | 是 |
 | `build_vibration_comp_test.m` | 模型构建 | 生成 `vibration_comp_test.slx` | 是 |
+| `studies/model_following_position_ref/build_model_following_position_ref_model.m` | 模型构建 | 生成模型跟踪位置参考演示模型 | 是 |
 | `build_speedloop_kf_test.m` | 模型构建 | 生成速度环 KF 测试模型 | 是 |
 | `build_openloop_test.m` | 模型构建 | 生成开环测试模型 | 是 |
 | `open_cogging_position_scan_model.m` | 模型打开 | 打开位置扫描模型 | 是 |
@@ -108,6 +110,18 @@
 | `algorithms/position_scan_ref_fcn.m` | 扫描位置参考 |
 | `algorithms/position_sine_ref_fcn.m` | 正弦位置参考 |
 | `algorithms/position_chirp_ref_fcn.m` | Chirp 位置参考 |
+
+### 8.1 现代 MBD 模块包：algorithms/*_mbd/
+
+新的嵌入式交付模块不应继续扩散为散落的 `algorithms/*.m` 函数。优先使用：
+
+```text
+.sldd + NumericType/AliasType/Bus + 可重入 Simulink 模型 + 功能测试 + README
+```
+
+| 目录 | 作用 |
+| --- | --- |
+| `algorithms/motor_clarke_park_mbd/` | Clarke/Park 结构体接口、定点类型、可重入模型与测试 |
 
 ## 9. 模型搭建库：build_modules/
 

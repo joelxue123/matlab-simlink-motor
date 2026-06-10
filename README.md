@@ -153,6 +153,27 @@ table_info = learn_vibration_ff_table;
 9. PMSM 电机模型
 10. 采样电流、转速、电角度，回馈到控制器
 
+## 可复用 MBD 模块
+
+新的可复用控制算法模块应优先使用今天形成的现代 MBD 标准：
+
+```text
+.sldd + Simulink.NumericType / AliasType / Bus
++ 可重入 Simulink 模型
++ 功能测试
++ README
+```
+
+不要把新的嵌入式交付模块退化成散落的 `algorithms/*.m` MATLAB Function 脚本。现有
+`algorithms/*.m` 可以作为 legacy/仿真快速验证层继续存在，但新里程碑模块应放成独立
+MBD 模块包，例如：
+
+```text
+algorithms/motor_clarke_park_mbd/
+```
+
+该目录负责维护 Clarke/Park 的接口字典、Bus 结构体、定点类型、可重入模型和测试入口。
+
 ## average-inverter 的作用
 
 average-inverter 不是逐开关器件的模型，而是平均化电压源模型。优点是：
