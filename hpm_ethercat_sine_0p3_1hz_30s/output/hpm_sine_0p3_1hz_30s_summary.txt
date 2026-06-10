@@ -1,0 +1,16 @@
+HPM sine test 0.3 rad, 1 Hz, 30 s
+samples: 29998
+frame_index: 1 .. 29998, non-continuous steps: 0
+cycle: 2 .. 29998, duplicate steps: 247, gap events: 246, missing cycle count: 246, backward steps: 0
+nonzero error_code samples: 0
+position range: -0.297932 .. 0.297932 rad
+speed range: -1.890593 .. 2.029755 rad/s
+torque range: -0.046159 .. 0.129625 Nm
+command position range: -0.300000 .. 0.300000 rad
+command speed range: -1.884956 .. 1.884956 rad/s
+nominal error RMS: 0.020554 rad, max abs: 0.033952 rad
+estimated 1Hz amp: 0.299164 rad
+estimated phase: -0.096708 rad, delay: 15.391 ms
+estimated offset: 0.000008 rad
+saved figure: /home/user/study/AI+MOTOR/matlab-practice/hpm_ethercat_sine_0p3_1hz_30s/output/hpm_sine_0p3_1hz_30s_analysis.png
+saved summary: /home/user/study/AI+MOTOR/matlab-practice/hpm_ethercat_sine_0p3_1hz_30s/output/hpm_sine_0p3_1hz_30s_summary.txt

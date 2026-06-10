@@ -1,0 +1,42 @@
+Current sensor harmonic regression
+
+fs_Hz       = 20000
+fe_Hz       = 50
+polePairs   = 7
+fm_Hz       = 7.14285714
+
+Rules
+  offset fault        -> 1x electrical ripple in dq
+  gain mismatch fault -> 2x electrical ripple in dq
+  noise fault         -> broadband, not a fixed harmonic
+
+nominal
+  h1_A         = 1.58746546e-18
+  h2_A         = 1.29021534e-16
+  rms_ac_id_A  = 1.1394485e-16
+  rms_ac_iq_A  = 2.58927241e-16
+
+offset_fault
+  h1_A         = 0.0899382504
+  h2_A         = 1.27091203e-16
+  rms_ac_id_A  = 0.0449691252
+  rms_ac_iq_A  = 0.0449691252
+
+gain_mismatch_fault
+  h1_A         = 8.49431996e-18
+  h2_A         = 0.0561248608
+  rms_ac_id_A  = 0.0280624304
+  rms_ac_iq_A  = 0.0280624304
+
+noise_fault
+  h1_A         = 0.000561289063
+  h2_A         = 0.000629295098
+  rms_ac_id_A  = 0.0245512157
+  rms_ac_iq_A  = 0.0245046894
+
+pwm_ripple_fault
+  h1_A         = 7.84054476e-17
+  h2_A         = 1.27581338e-16
+  rms_ac_id_A  = 0.0212132034
+  rms_ac_iq_A  = 0.0212132034
+

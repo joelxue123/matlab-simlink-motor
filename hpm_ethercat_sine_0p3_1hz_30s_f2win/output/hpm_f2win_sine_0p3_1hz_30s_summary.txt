@@ -1,0 +1,17 @@
+HPM F2 window sine test 0.3 rad, 1 Hz, 30 s
+samples: 30000
+cmd_seq range: 0 .. 29999
+missing cmd count: 0
+duplicate cmd count: 0
+nonzero error_code samples: 0
+position range: -0.298028 .. 0.297932 rad
+speed range: -1.888151 .. 1.988251 rad/s
+torque range: -0.042954 .. 0.113603 Nm
+command position range: -0.300000 .. 0.300000 rad
+command speed range: -1.884956 .. 1.884956 rad/s
+nominal error RMS: 0.022127 rad, max abs: 0.033116 rad
+estimated 1Hz amp: 0.299167 rad
+estimated phase: -0.104350 rad, delay: 16.608 ms
+estimated offset: 0.000014 rad
+saved figure: /home/user/study/AI+MOTOR/matlab-practice/hpm_ethercat_sine_0p3_1hz_30s_f2win/output/hpm_f2win_sine_0p3_1hz_30s_analysis.png
+saved summary: /home/user/study/AI+MOTOR/matlab-practice/hpm_ethercat_sine_0p3_1hz_30s_f2win/output/hpm_f2win_sine_0p3_1hz_30s_summary.txt

@@ -1,0 +1,15 @@
+HPM EtherCAT trajectory streamer
+interface=enp129s0 mode=sine target=0x04 points=30000 period_us=1000 prefill=32
+sine: amp_rad=0.300000 freq_hz=1.000000 kp=12.000000 kd=0.200000 torque_nm=0.000000
+realtime: policy=SCHED_FIFO priority=80 sched_set=ok mlockall=ok
+1 slave(s) found.
+slave 1: name=ECAT_Device
+mapped IO: outputs=64 bytes/0 bits, inputs=64 bytes/0 bits
+expected WKC=3, segments=1
+OP reached. Streaming trajectory chunks...
+done: loops=30082 points_sent=30000 tx_packets=14986 wkc_fail=0 max_late_us=304 avg_late_us=4 max_exchange_us=1294 avg_exchange_us=679
+uart/motor: rx_bytes=0 frames=30000 crc_ok=30000 crc_bad=0 control_frames=30000 feedback_frames=30000 buffered_rx=0 rx_buffer_drops=0
+motor_fb: last_feedback_seq=30000 last_cmd_seq=29999 tx_tick=42500 rx_tick=42500 pending=0 crc_ok_count=0 crc_bad_count=0 fb_overflow=0 pending_missing_samples=0 fb_overflow_samples=0 duplicate_samples=30000
+hpm: last_ack=1047220097 last_status=0 last_error_count=0 traj_status_frames=79 queue=0 space=127 enqueued=30000 played=30000 underrun=1 last_seq=29999 bad_packets=0 overflow=0 tx_busy=0 bad_status_samples=0 overflow_status_samples=0
+late_us: min=1 avg=4 p50=3 p90=6 p99=11 p99.9=37 max=304 over_50=26 over_100=14 over_250=1 over_500=0 over_1000=0
+exchange_us: min=44 avg=679 p50=683 p90=693 p99=827 p99.9=896 max=1294 over_50=30078 over_100=30072 over_250=30056 over_500=29358 over_1000=3

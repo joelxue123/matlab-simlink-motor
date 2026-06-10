@@ -1,0 +1,36 @@
+%% Setup paths for the reusable motor-control module package
+%
+% This script intentionally only configures paths and prints the reuse entry.
+% It does not rebuild models or generate code.
+
+script_dir = fileparts(mfilename('fullpath'));
+repo_dir = fileparts(script_dir);
+
+module_paths = { ...
+    script_dir, ...
+    fullfile(script_dir, 'tests'), ...
+    fullfile(script_dir, 'codegen'), ...
+    fullfile(repo_dir, 'motor_speed_pi_mbd'), ...
+    fullfile(repo_dir, 'motor_current_pi_mbd'), ...
+    fullfile(repo_dir, 'motor_float_open_loop_mbd'), ...
+    fullfile(repo_dir, 'motor_clarke_park_struct'), ...
+    fullfile(repo_dir, 'motor_speed_current_loop_mbd')};
+
+for i = 1:numel(module_paths)
+    if exist(module_paths{i}, 'dir')
+        addpath(module_paths{i});
+    end
+end
+
+assignin('base', 'motor_control_modules_root', script_dir);
+assignin('base', 'motor_control_repo_root', repo_dir);
+
+fprintf('Motor control module paths are configured.\n');
+fprintf('Reuse package root:\n  %s\n', script_dir);
+fprintf('Build shared .sldd with:\n  run(''%s'')\n', ...
+    fullfile(script_dir, 'build_motor_control_interface_dictionary.m'));
+fprintf('Build library with:\n  run(''%s'')\n', ...
+    fullfile(script_dir, 'build_motor_control_module_library.m'));
+fprintf('Run module smoke tests with:\n  run(''%s'')\n', ...
+    fullfile(script_dir, 'tests', 'run_all_module_smoke_tests.m'));
+fprintf('Refresh Simulink Library Browser with:\n  sl_refresh_customizations\n');
