@@ -94,6 +94,16 @@ Current baseline:
 100us speed loop
 ```
 
+For PWM dead-time compensation, the reuse pattern is:
+
+```text
+motor_control_lib/DeadtimeCompensationStep
+```
+
+Feed it with a `pwm_deadtime_comp_input_t` bus and use the
+`pwm_deadtime_comp_output_t` bus in the PWM adapter. Do not paste the
+algorithm contents into each plant model.
+
 Example platform-neutral schedule:
 
 ```c

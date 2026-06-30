@@ -1,0 +1,10 @@
+PWM dead-time sampling-window functional test
+usable_low_a_s = 4.54999972e-05 s
+usable_low_b_s = 5.00000624e-07 s
+usable_low_c_s = 2.29999987e-05 s
+sample_valid_a = 1
+sample_valid_b = 0
+sample_valid_c = 1
+all_samples_valid = 0
+min_usable_low_s = 5.00000624e-07 s
+Result: PASS

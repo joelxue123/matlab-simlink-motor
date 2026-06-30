@@ -82,3 +82,34 @@ encoder angle quality
 ```
 
 This regression is the first guardrail for that workflow.
+
+## Current-Torque Curve
+
+Run:
+
+```bash
+matlab -batch "run('motor_performance_characterization/run_current_torque_curve.m')"
+```
+
+Generated artifacts:
+
+```text
+results/current_torque_curve_data.csv
+results/current_torque_curve_report.txt
+results/current_torque_curve.png
+```
+
+This script stores the measured hanging-mass points, derives:
+
+```text
+phase current RMS
+input power
+mechanical output power
+efficiency
+```
+
+and fits a linear current-torque relation. The current conversion assumption is:
+
+```text
+phase_current_rms_A = line_current_peak_A / sqrt(2)
+```

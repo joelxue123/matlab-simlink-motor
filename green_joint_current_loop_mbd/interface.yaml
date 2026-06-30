@@ -1,0 +1,163 @@
+module: green_joint_current_pi
+dictionary: green_joint_current_loop_interface.sldd
+model: green_joint_current_loop_model
+step_function: GreenJointCurrentLoopStep
+type_header: green_joint_current_loop_types.h
+sample_time_s: 0.00005
+
+aliases:
+  - name: T_GJFloat
+    base_type: single
+    data_scope: Exported
+    unit: "1"
+    description: Generic float-first green-joint controller scalar.
+
+  - name: T_GJCurrent
+    base_type: single
+    data_scope: Exported
+    unit: A
+    description: Dq current in amperes.
+
+  - name: T_GJVoltage
+    base_type: single
+    data_scope: Exported
+    unit: V
+    description: Physical voltage command in volts.
+
+  - name: T_GJVoltageNorm
+    base_type: single
+    data_scope: Exported
+    unit: "1"
+    description: Voltage vector normalized to the unit circle for downstream modulation.
+
+buses:
+  - name: green_joint_current_loop_input_t
+    data_scope: Exported
+    elements:
+      - name: id_ref
+        type: T_GJCurrent
+        unit: A
+        description: D-axis current command.
+      - name: iq_ref
+        type: T_GJCurrent
+        unit: A
+        description: Q-axis current command.
+      - name: id_fbk
+        type: T_GJCurrent
+        unit: A
+        description: Filtered D-axis current feedback supplied by firmware.
+      - name: iq_fbk
+        type: T_GJCurrent
+        unit: A
+        description: Filtered Q-axis current feedback supplied by firmware.
+      - name: vbus
+        type: T_GJVoltage
+        unit: V
+        min: 0
+        description: DC bus voltage used to derive the circular Vdq limit.
+
+  - name: green_joint_current_loop_output_t
+    data_scope: Exported
+    elements:
+      - name: vd_cmd
+        type: T_GJVoltage
+        unit: V
+        description: D-axis physical voltage command after Vd-priority clamp.
+      - name: vq_cmd
+        type: T_GJVoltage
+        unit: V
+        description: Q-axis physical voltage command limited by voltage remaining after Vd is preserved.
+      - name: voltage_mag
+        type: T_GJVoltage
+        unit: V
+        description: Magnitude of clamped Vdq command.
+      - name: vd_norm
+        type: T_GJVoltageNorm
+        unit: "1"
+        description: D-axis voltage normalized by the usable current-loop voltage limit.
+      - name: vq_norm
+        type: T_GJVoltageNorm
+        unit: "1"
+        description: Q-axis voltage normalized by the usable current-loop voltage limit.
+      - name: voltage_mag_norm
+        type: T_GJVoltageNorm
+        unit: "1"
+        min: 0
+        max: 1
+        description: Magnitude normalized by the usable current-loop voltage limit, clamped to the unit circle.
+      - name: vd_mod
+        type: T_GJVoltageNorm
+        unit: "1"
+        description: D-axis normalized voltage command relative to the SVPWM linear base limit. Feed this to the legacy inverse Park/SVGEN path.
+      - name: vq_mod
+        type: T_GJVoltageNorm
+        unit: "1"
+        description: Q-axis normalized voltage command relative to the SVPWM linear base limit. Feed this to the legacy inverse Park/SVGEN path.
+      - name: voltage_mag_mod
+        type: T_GJVoltageNorm
+        unit: "1"
+        min: 0
+        max: 1
+        description: Magnitude relative to the SVPWM linear base limit. Maximum is VoltageModulationRatio.
+
+parameters:
+  - name: CurDKp
+    type: T_GJFloat
+    value: 1.52320723148
+    unit: V/A
+    storage: ExportedGlobal
+    description: D-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json.
+
+  - name: CurDKi
+    type: T_GJFloat
+    value: 23812.2981754
+    unit: V/(A*s)
+    storage: ExportedGlobal
+    description: D-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json.
+
+  - name: CurQKp
+    type: T_GJFloat
+    value: 1.52320723148
+    unit: V/A
+    storage: ExportedGlobal
+    description: Q-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json.
+
+  - name: CurQKi
+    type: T_GJFloat
+    value: 23812.2981754
+    unit: V/(A*s)
+    storage: ExportedGlobal
+    description: Q-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json.
+
+  - name: PiCorrectionGain
+    type: T_GJFloat
+    value: 400
+    unit: 1/s
+    storage: ExportedGlobal
+    description: Back-calculation anti-windup gain for circular voltage saturation.
+
+  - name: VoltageLimitRatio
+    type: T_GJFloat
+    value: 0.577
+    unit: "1"
+    min: 0
+    max: 1
+    storage: ExportedGlobal
+    description: SVPWM linear Vdq base limit as a ratio of DC bus voltage. Usable PI voltage limit is VoltageLimitRatio * VoltageModulationRatio * vbus.
+
+  - name: VoltageModulationRatio
+    type: T_GJFloat
+    value: 0.9
+    unit: "1"
+    min: 0
+    max: 1
+    storage: ExportedGlobal
+    description: Usable fraction of the SVPWM linear base limit. This participates in physical PI voltage saturation and defines the maximum vd_mod/vq_mod magnitude.
+
+  - name: VoltageEpsilon
+    type: T_GJVoltage
+    value: 0.001
+    unit: V
+    min: 0
+    storage: ExportedGlobal
+    description: Small positive denominator guard for voltage normalization.

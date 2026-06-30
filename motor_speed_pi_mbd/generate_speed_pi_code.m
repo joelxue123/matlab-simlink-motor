@@ -6,7 +6,12 @@
 clear; clc;
 
 script_dir = fileparts(mfilename('fullpath'));
+previous_dir = pwd;
+cleanup_dir = onCleanup(@() cd(previous_dir));
+cd(script_dir);
+
 run(fullfile(script_dir, 'build_speed_pi_model.m'));
+cd(script_dir);
 
 cfg = evalin('base', 'speed_pi_config');
 model = cfg.modelName;

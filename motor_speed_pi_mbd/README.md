@@ -108,7 +108,9 @@ extern void SpeedPiStep(const speed_pi_input_t *rtu_speed_in,
 
 ## Design Notes
 
-- The speed loop runs at `100us`, slower than the `50us` current loop.
+- The current green-joint mainline speed loop runs at `100us`, slower than
+  the `50us` current loop but fast enough to avoid the old 500us scheduling
+  bottleneck.
 - The output `iq_ref` is the command for the q-axis current loop.
 - Parameters `Kp_speed`, `Ki_speed`, `Kaw_speed`, and `IqLimitDefault` live in
   the `.sldd`.

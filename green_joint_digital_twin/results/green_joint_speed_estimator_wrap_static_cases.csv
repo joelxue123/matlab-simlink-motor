@@ -1,0 +1,5 @@
+case_name,theta_meas_rad,theta_pred_rad,theta_err_rad,expected_err_rad,abs_error_rad,pass
+meas_after_zero_pred_before_2pi,0.01,6.27318530717959,0.0199999999999996,0.02,4.26741975090295e-16,1
+meas_before_2pi_pred_after_zero,6.27318530717959,0.01,-0.0199999999999996,-0.02,4.26741975090295e-16,1
+exact_positive_pi_maps_to_neg_pi,3.14159265358979,0,-3.14159265358979,-3.14159265358979,0,1
+exact_negative_pi_maps_to_neg_pi,0,3.14159265358979,-3.14159265358979,-3.14159265358979,0,1

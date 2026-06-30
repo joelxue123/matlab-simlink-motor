@@ -72,6 +72,7 @@ CurrentPiStep
 DqToAbcDutyStep
 MotorClarkeParkStep
 OpenLoopCommand
+DeadtimeCompensationStep
 ```
 
 Recommended meaning:
@@ -83,6 +84,8 @@ Recommended meaning:
   feedback to dq current.
 - `OpenLoopCommand`: startup/debug candidate; keep it separate from the normal
   closed-loop controller path.
+- `DeadtimeCompensationStep`: production PWM adapter candidate, compensates
+  duty using dq-synthesized phase-current polarity.
 
 ## Validation
 

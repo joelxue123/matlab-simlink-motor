@@ -1,0 +1,30 @@
+Current-torque curve from measured hanging-mass data
+
+Assumption
+  measured current points are peak current values
+  phase_current_rms_A = phase_current_peak_A / sqrt(2)
+
+Reference points
+  rated : 0.7 Arms -> 5.09 mNm
+  peak  : 2.1 Arms -> 14.67 mNm
+
+Fit through origin
+  Kt_Apeak = 4.9625816 mNm/A_peak, R2 = 0.995986351
+  Kt_Arms  = 7.01815021 mNm/A_rms,  R2 = 0.995986351
+
+Affine fit
+  torque_mNm = 5.22314232 * Ipeak_A + -0.500303131, R2 = 0.999332007
+  torque_mNm = 7.38663871 * Irms_A  + -0.500303131, R2 = 0.999332007
+
+Measured data with derived power and efficiency
+   1: Ipeak=0.300 A, Irms=0.212 A, torque=1.000 mNm, speed=15000 rpm, Pin=3.240 W, Pout=1.571 W, eta=48.48%
+   2: Ipeak=0.470 A, Irms=0.332 A, torque=2.000 mNm, speed=15000 rpm, Pin=5.040 W, Pout=3.142 W, eta=62.33%
+   3: Ipeak=0.700 A, Irms=0.495 A, torque=3.000 mNm, speed=15000 rpm, Pin=7.080 W, Pout=4.712 W, eta=66.56%
+   4: Ipeak=0.850 A, Irms=0.601 A, torque=4.000 mNm, speed=14400 rpm, Pin=8.760 W, Pout=6.032 W, eta=68.86%
+   5: Ipeak=1.000 A, Irms=0.707 A, torque=5.000 mNm, speed=13700 rpm, Pin=10.920 W, Pout=7.173 W, eta=65.69%
+   6: Ipeak=1.250 A, Irms=0.884 A, torque=6.000 mNm, speed=13000 rpm, Pin=12.600 W, Pout=8.168 W, eta=64.83%
+   7: Ipeak=1.540 A, Irms=1.089 A, torque=7.500 mNm, speed=12000 rpm, Pin=15.360 W, Pout=9.425 W, eta=61.36%
+   8: Ipeak=1.840 A, Irms=1.301 A, torque=9.000 mNm, speed=11000 rpm, Pin=17.760 W, Pout=10.367 W, eta=58.37%
+   9: Ipeak=2.200 A, Irms=1.556 A, torque=11.000 mNm, speed=9300 rpm, Pin=21.360 W, Pout=10.713 W, eta=50.15%
+  10: Ipeak=2.600 A, Irms=1.838 A, torque=13.000 mNm, speed=7800 rpm, Pin=24.960 W, Pout=10.619 W, eta=42.54%
+  11: Ipeak=2.950 A, Irms=2.086 A, torque=15.000 mNm, speed=6300 rpm, Pin=28.200 W, Pout=9.896 W, eta=35.09%

@@ -1,0 +1,21 @@
+PMSM electrical ID test conditions
+
+Standstill RL step test
+  d-axis: id starts near 0 A, vd_step = 1.5 V, we = 0 rad/s
+  q-axis: iq starts near 0 A, vq_step = 1.8 V, we = 0 rad/s
+  Ts = 5e-05 s, duration = 0.05 s
+
+Flux linkage spin test
+  id command ~= 0 A
+  iq command ~= 0 A
+  we test points rad/s = 100, 180, 260, 340, 420
+  samplesPerSpeed = 200
+
+Encoder alignment test
+  electrical turns = 6
+  sample count = 4000
+  true offset = 0.35 rad
+  estimated offset = 0.350011751 rad
+  offset error = 1.1751322e-05 rad
+  residual 1x = 0.019961003 rad
+  residual 2x = 0.0100054936 rad

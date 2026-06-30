@@ -35,6 +35,7 @@ motor_control_modules/build_motor_control_interface_dictionary.m
 | `DqToAbcDutyStep` | `open_loop_cmd_t` | `phase_duty_t` | 50us baseline | dq voltage to `[0, 1]` phase duty |
 | `MotorClarkeParkStep` | `motor_t` | `motor_dq_t` | 50us baseline | phase current feedback to alpha/beta and dq |
 | `OpenLoopCommand` | internal constants | `open_loop_cmd_t` | 50us baseline | startup/debug open-loop command source |
+| `DeadtimeCompensationStep` | `pwm_deadtime_comp_input_t` | `pwm_deadtime_comp_output_t` | 50us baseline | PWM dead-time duty compensation |
 
 ## SpeedPiStep
 
@@ -152,6 +153,57 @@ motor_dq_t {
   id
   iq
 }
+```
+
+## DeadtimeCompensationStep
+
+Input bus:
+
+```text
+pwm_deadtime_comp_input_t {
+  da
+  db
+  dc
+  id
+  iq
+  sin_theta_e
+  cos_theta_e
+}
+```
+
+Output bus:
+
+```text
+pwm_deadtime_comp_output_t {
+  da
+  db
+  dc
+  comp_a
+  comp_b
+  comp_c
+  active_a
+  active_b
+  active_c
+}
+```
+
+Main parameters:
+
+```text
+DeadtimeCompEnable
+DeadtimeCompDuty
+DeadtimeCompCurrentZero_A
+DeadtimeCompCurrentFull_A
+DeadtimeCompCurrentInvRange_1perA
+DeadtimeCompPolarity
+```
+
+Contract:
+
+```text
+Input da/db/dc and output da/db/dc are duty ratios in [0, 1].
+Current polarity is synthesized from id/iq/sin_theta_e/cos_theta_e.
+Hardware phase currents are not direct inputs to this module.
 ```
 
 ## Release Checklist

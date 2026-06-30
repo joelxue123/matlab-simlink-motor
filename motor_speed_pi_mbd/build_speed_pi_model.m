@@ -40,10 +40,10 @@ end
 new_system(model);
 set_param(model, 'DataDictionary', cfg.dictionaryName);
 set_param(model, ...
-    'StopTime', 'speed_pi_simcfg.stop_time', ...
+    'StopTime', '0.001', ...
     'SolverType', 'Fixed-step', ...
     'Solver', 'FixedStepDiscrete', ...
-    'FixedStep', 'speed_pi_simcfg.Ts_speed', ...
+    'FixedStep', num2str(defaults.simcfg.Ts_speed, '%.12g'), ...
     'SystemTargetFile', 'ert.tlc', ...
     'ProdHWDeviceType', 'ARM Compatible->ARM Cortex', ...
     'TargetHWDeviceType', 'ARM Compatible->ARM Cortex', ...
@@ -52,16 +52,15 @@ set_param(model, ...
     'GenCodeOnly', 'on', ...
     'GenerateSampleERTMain', 'off', ...
     'SupportContinuousTime', 'off', ...
+    'ParameterPrecisionLossMsg', 'none', ...
     'InlineParams', 'off');
 
 set_param(model, ...
     'CodeInterfacePackaging', 'Reusable function', ...
     'ModelReferenceNumInstancesAllowed', 'Multi');
 
-add_speed_pi_test_sources(model, cfg);
 add_speed_pi_subsystem(model, cfg);
-add_speed_plant_harness(model, cfg);
-add_output_logs(model);
+add_speed_pi_root_interface(model, cfg);
 
 set_param(model, 'SimulationCommand', 'update');
 save_system(model, model_file);
@@ -71,11 +70,12 @@ fprintf('Built speed PI MBD model:\n  %s\n', model_file);
 function cfg = customer_interface_config()
 % Customer-editable interface and architecture contract.
 cfg.modelName = 'speed_pi_model';
-cfg.sampleTime = 'speed_pi_simcfg.Ts_speed';
+cfg.sampleTime = '100e-6';
 
 cfg.dictionaryName = 'speed_pi_interface.sldd';
 cfg.typeHeaderFile = 'speed_pi_types.h';
-cfg.rebuildDictionary = true;
+cfg.rebuildDictionary = false;
+cfg.preserveExistingParameterValues = true;
 
 cfg.realTypeName = 'T_SpeedPiFloat';
 cfg.speedTypeName = 'T_SpeedPiSpeed';
@@ -91,6 +91,8 @@ end
 function defaults = default_speed_pi_params()
 % Baseline numbers are derived from average-inverter/motor_control_params.m.
 defaults.simcfg.stop_time = 0.250;
+% green-joint calls the speed loop every 2 current-loop ISR ticks:
+% 20 kHz current loop -> 100 us speed-loop period.
 defaults.simcfg.Ts_speed = 100e-6;
 
 motor.pole_pairs = 10;
@@ -152,10 +154,10 @@ upsert_bus_type(design_data, cfg.inputBusName, cfg.typeHeaderFile, { ...
 upsert_bus_type(design_data, cfg.outputBusName, cfg.typeHeaderFile, { ...
     {'iq_ref', cfg.currentTypeName}});
 
-upsert_parameter(design_data, 'Kp_speed', defaults.Kp_speed, cfg.gainTypeName);
-upsert_parameter(design_data, 'Ki_speed', defaults.Ki_speed, cfg.gainTypeName);
-upsert_parameter(design_data, 'Kaw_speed', defaults.Kaw_speed, cfg.gainTypeName);
-upsert_parameter(design_data, 'IqLimitDefault', defaults.IqLimitDefault, cfg.currentTypeName);
+upsert_parameter(design_data, 'Kp_speed', defaults.Kp_speed, cfg.gainTypeName, cfg);
+upsert_parameter(design_data, 'Ki_speed', defaults.Ki_speed, cfg.gainTypeName, cfg);
+upsert_parameter(design_data, 'Kaw_speed', defaults.Kaw_speed, cfg.gainTypeName, cfg);
+upsert_parameter(design_data, 'IqLimitDefault', defaults.IqLimitDefault, cfg.currentTypeName, cfg);
 
 saveChanges(dd);
 close(dd);
@@ -207,7 +209,7 @@ else
 end
 end
 
-function upsert_parameter(section, name, value, data_type)
+function upsert_parameter(section, name, value, data_type, cfg)
 parameter = Simulink.Parameter(double(value));
 parameter.DataType = data_type;
 parameter.CoderInfo.StorageClass = 'Auto';
@@ -216,6 +218,13 @@ entry = find(section, 'Name', name);
 if isempty(entry)
     addEntry(section, name, parameter);
 else
+    if isfield(cfg, 'preserveExistingParameterValues') && ...
+            cfg.preserveExistingParameterValues
+        existing_parameter = getValue(entry(1));
+        if isa(existing_parameter, 'Simulink.Parameter')
+            parameter.Value = existing_parameter.Value;
+        end
+    end
     setValue(entry(1), parameter);
 end
 end
@@ -319,7 +328,7 @@ add_block('simulink/Math Operations/Sum', [subsystem '/speed_integrator_rate'], 
     'OutDataTypeStr', cfg.currentTypeName);
 add_block('simulink/Math Operations/Gain', [subsystem '/speed_integrator_delta'], ...
     'Position', [980 140 1040 170], ...
-    'Gain', 'speed_pi_simcfg.Ts_speed', ...
+    'Gain', cfg.sampleTime, ...
     'ParamDataTypeStr', cfg.realTypeName, ...
     'OutDataTypeStr', cfg.currentTypeName);
 add_block('simulink/Math Operations/Sum', [subsystem '/speed_integrator_next'], ...
@@ -365,8 +374,19 @@ add_line(subsystem, 'speed_integrator_rate/1', 'speed_integrator_delta/1', 'auto
 add_line(subsystem, 'speed_integrator_state/1', 'speed_integrator_next/1', 'autorouting', 'on');
 add_line(subsystem, 'speed_integrator_delta/1', 'speed_integrator_next/2', 'autorouting', 'on');
 add_line(subsystem, 'speed_integrator_next/1', 'speed_integrator_state/1', 'autorouting', 'on');
+end
 
-add_line(model, 'speed_input_bus_creator/1', 'SpeedPiStep/1', 'autorouting', 'on');
+function add_speed_pi_root_interface(model, cfg)
+add_block('simulink/Sources/In1', [model '/speed_in'], ...
+    'Position', [55 120 85 140], ...
+    'OutDataTypeStr', ['Bus: ' cfg.inputBusName], ...
+    'BusOutputAsStruct', 'on');
+add_block('simulink/Sinks/Out1', [model '/speed_out'], ...
+    'Position', [520 120 550 140], ...
+    'OutDataTypeStr', ['Bus: ' cfg.outputBusName]);
+
+add_line(model, 'speed_in/1', 'SpeedPiStep/1', 'autorouting', 'on');
+add_line(model, 'SpeedPiStep/1', 'speed_out/1', 'autorouting', 'on');
 end
 
 function add_speed_plant_harness(model, cfg)

@@ -10,6 +10,81 @@ MBD_ERRATA.md
 
 本文件记录当前正确路线；勘误文档记录已经犯过的错误、修正依据和预防规则。
 
+## 长期协作入口
+
+2026-06-10 起，`docs/` 是 `matlab-practice/` 的规范入口：
+
+```text
+docs/README.md
+docs/progress.md
+docs/model_development_standard.md
+docs/reusable_modules_usage.md
+docs/ai_collaboration_rules.md
+```
+
+后续 AI 或人接手时，先看 `docs/README.md`，再进入具体模块目录。`MBD_DEVELOPMENT_NOTES.md`
+继续记录学习判断和工程经验，`MBD_ERRATA.md` 继续记录勘误。
+
+## 用户接口合同前移
+
+2026-06-22 形成新的接口维护纪律：
+
+```text
+interface.yaml / interface.json
+  -> generator .m
+  -> interface.sldd
+  -> Simulink model
+  -> generated C headers
+```
+
+原因：
+
+```text
+用户和后续 AI 很难长期维护 build 脚本深处的 Simulink.BusElement、
+Simulink.AliasType、Simulink.Parameter 代码，也不应该手工修改 .sldd。
+```
+
+新的角色划分：
+
+```text
+interface.yaml = 用户可编辑接口合同
+.sldd          = Simulink/Embedded Coder 使用的数据字典
+.m            = 生成器和模型构建工具
+.slx          = 算法图
+generated .h   = C 工程接口
+```
+
+详细纪律见：
+
+```text
+docs/mbd_interface_contract_standard.md
+```
+
+后续新 MBD 模块优先采用 `interface.yaml`。已有模块如果接口仍写在 `.m` 中，
+先标记为 `[TRANSITION]`，等发生实质接口变更时再迁移，不强行一次性重写。
+
+## 有限 MBD 原则
+
+2026-06-10 形成新的工程边界：
+
+```text
+用户级算法、稳定接口、可交付 C core -> 按 MBD 标准。
+物理 plant、开关器件、验证 harness、探索脚本 -> 保持原来的仿真/研究需求。
+```
+
+含义：
+
+```text
+电流 PI、速度 PI、Clarke/Park、SVPWM/duty、deadtime compensation、
+current_valid、observer、在线参数辨识等用户级算法，应使用 .sldd、Bus、
+AliasType/NumericType、可重入接口和 codegen 检查。
+
+Universal Bridge、MOSFET/Diodes、PMSM/SPS plant、波形观察模型、参数扫描脚本，
+优先服务物理复现、可视化和验证，不强行做成可生成 C 的 MBD 模块。
+```
+
+这个原则用于防止过度 MBD：MBD 是算法交付方式，不是所有仿真对象的唯一形态。
+
 ## 当前里程碑
 
 2026-06-04 形成了一个重要结论：
@@ -1553,3 +1628,509 @@ gain_mismatch_fault:
 ```
 
 这个回归测试是后续电机性能检测体系的第一个 guardrail：不要先怀疑电机本体，先确认电流采样链路是否把 offset/gain/noise 注入到了 dq 电流里。
+
+## 2026-06-10：PMSM 电参辨识与有感/无感角度协同
+
+新增专题：
+
+```text
+identification/pmsm_electrical_parameter_identification/
+```
+
+目标：
+
+```text
+估计 Rs/Ld/Lq/psi_f
+估计 encoder electrical offset
+分析 encoder residual 1x/2x
+为 sensorless observer 与 encoder angle 对齐做准备
+```
+
+当前方法：
+
+```text
+standstill d-axis voltage step -> Rs, Ld
+standstill q-axis voltage step -> Rs, Lq
+spin back-EMF / vq slope       -> psi_f
+theta_encoder - theta_sensorless circular mean -> encoder offset
+offset removal residual FFT/harmonic -> encoder nonlinearity
+```
+
+验证命令：
+
+```bash
+matlab -batch "run('identification/pmsm_electrical_parameter_identification/run_pmsm_electrical_id_demo.m')"
+```
+
+当前合成数据结果：
+
+```text
+Rs true / estimate   : 0.42 / 0.419958 ohm
+Ld true / estimate   : 0.00025 / 0.000251283 H
+Lq true / estimate   : 0.00036 / 0.000359821 H
+psi true / estimate  : 0.018 / 0.0179997 Wb
+encoder offset error : 1.17513e-05 rad
+```
+
+已新增 Simulink 波形观察模型：
+
+```text
+identification/pmsm_electrical_parameter_identification/pmsm_electrical_id_waveform_model.slx
+```
+
+生成命令：
+
+```bash
+matlab -batch "run('identification/pmsm_electrical_parameter_identification/build_pmsm_electrical_id_waveform_model.m')"
+```
+
+模型中包含：
+
+```text
+Standstill_RL_Step_Test
+Flux_Linkage_Spin_Test
+Encoder_Alignment_Test
+```
+
+测试条件记录：
+
+```text
+identification/pmsm_electrical_parameter_identification/results/pmsm_electrical_id_test_conditions.txt
+```
+
+当前测试点：
+
+```text
+RL step:
+  d-axis: vd_step = 1.5 V, id starts near 0 A, we = 0 rad/s
+  q-axis: vq_step = 1.8 V, iq starts near 0 A, we = 0 rad/s
+
+Flux spin:
+  id ~= 0 A
+  iq ~= 0 A
+  we = [100, 180, 260, 340, 420] rad/s
+
+Encoder alignment:
+  electrical turns = 6
+  true offset = 0.35 rad
+```
+
+验证：
+
+```text
+已运行 sim('pmsm_electrical_id_waveform_model')，通过。
+```
+
+重要经验：
+
+```text
+不要直接用 noisy di/dt 做电感辨识第一版。
+standstill voltage step 更适合用指数响应拟合 tau = L/R：
+  i(t) = Iinf * (1 - exp(-t/tau))
+  R = Vinf / Iinf
+  L = R * tau
+```
+
+下一步：
+
+```text
+1. 接入真实台架 CSV。
+2. 加入温度影响：Rs(T) 和 psi_f(T)。
+3. 加入电感饱和：Ld(id,iq), Lq(id,iq) map。
+4. 建立 sensorless angle 与 encoder angle 的在线对齐/健康监测模块。
+5. 再进入 Simulink/MBD 模块化与代码生成。
+```
+
+## 2026-06-10：高占空比死区采样窗口要进入 MBD 接口层
+
+问题背景：
+
+```text
+R = 4 ohm
+L = 100 uH
+PWM = 20 kHz
+deadtime = 500 ns
+```
+
+在这个条件下，一个 PWM 周期内三相电流斜率变化很大。中心采样适合控制，但不适合盲目当作真实平均值；高占空比时还会出现低边采样窗口被压缩的问题。
+
+已复现旧研究目录：
+
+```text
+average-inverter/switching_sampling_study/
+```
+
+复现结果：
+
+```text
+modulation ratio = 0.9
+R = 4 ohm
+L = 100 uH
+RL sample error RMS = 0.302540 A
+sampled phase ripple pk-pk = 3.348031 A
+```
+
+新增 MBD 模块：
+
+```text
+pwm_deadtime_sampling_mbd/
+```
+
+接口：
+
+```text
+pwm_phase_duty_t
+  -> DeadtimeSamplingWindowStep
+  -> pwm_sampling_status_t
+```
+
+核心公式：
+
+```text
+T_low_ideal = max((1 - duty) * T_pwm, 0)
+T_usable    = max(T_low_ideal - 2 * dead_time - adc_settle_time, 0)
+valid       = T_usable >= min_valid_window
+```
+
+功能测试：
+
+```text
+usable_low = [45.500 0.500 23.000] us
+sample_valid = [1 0 1]
+all_samples_valid = 0
+```
+
+生成 C 接口：
+
+```c
+extern void DeadtimeSamplingWindowStep(const pwm_phase_duty_t *rtu_duty_in,
+  pwm_sampling_status_t *rty_status_out);
+```
+
+重要边界修正：
+
+```text
+DeadtimeSamplingWindowStep 不是死区物理仿真。
+它只负责采样窗口 valid 判定，适合生成 C 放进 ADC/current adapter。
+
+真正分析死区对电机三相电流和电压误差的影响，需要开关级 plant：
+  PWM + deadtime gates
+    -> Universal Bridge MOSFET/Diodes
+    -> switching PMSM / winding model
+```
+
+已补开关级 smoke test：
+
+```text
+average-inverter/switching_sampling_study/run_switching_deadtime_motor_smoke_test.m
+```
+
+当前测试结果：
+
+```text
+Vdc = 12 V
+PWM = 20 kHz
+deadtime = 500 ns
+R = 4 ohm
+L = 100 uH
+deadtime compensation update = 50 us
+deadtime compensation duty = 0.01000
+deadtime compensation current source = dq_synthesized
+deadtime compensation id/iq = [0.0 0.2] A
+deadtime compensation current_zero/current_full = [0.02 0.10] A
+deadtime compensation polarity = -1
+ia/ib/ic pk-pk = [0.2731 1.1862 1.1045] A
+sum current RMS = 0 A
+```
+
+极性校准历史记录：
+
+```text
+no compensation max phase pk-pk ~= 1.2217 A
+polarity = +1 max phase pk-pk ~= 1.2441 A
+polarity = -1 max phase pk-pk ~= 1.1993 A
+```
+
+这组三行是早期 full-step deadband 补偿下的极性校准基线；当前补偿算法已经改成
+`current_zero/current_full` 平滑补偿。
+
+当前工程判断：
+
+```text
+current_valid 不应该是电流环内部的附带判断，而应该是 ADC/current adapter 的接口合同。
+PI、参数辨识和无感观测器都不应该默认相信高占空比下的所有电流采样点。
+```
+
+## 2026-06-10：死区补偿算法本身按 MBD/codegen 交付
+
+新的边界：
+
+```text
+死区物理影响分析：
+  average-inverter/switching_sampling_study/
+  Universal Bridge + MOSFET/Diodes + PMSM plant
+
+采样窗口 valid 判定：
+  pwm_deadtime_sampling_mbd/
+  DeadtimeSamplingWindowStep
+
+死区 duty 补偿算法：
+  pwm_deadtime_compensation_mbd/
+  DeadtimeCompensationStep
+```
+
+这三个东西不能混用。采样窗口模块不等于死区补偿；死区补偿模块也不等于开关级物理仿真。正确做法是分层：
+
+```text
+FOC/SVPWM 输出 duty
+  -> DeadtimeCompensationStep 生成补偿后 duty
+  -> PWM/platform adapter 输出寄存器或门极
+  -> 物理 plant/hardware 产生真实电流
+  -> current_valid/ADC adapter 判断采样可信度
+```
+
+新增 MBD 模块：
+
+```text
+pwm_deadtime_compensation_mbd/
+```
+
+接口：
+
+```text
+pwm_deadtime_comp_input_t {
+  da
+  db
+  dc
+  id
+  iq
+  sin_theta_e
+  cos_theta_e
+}
+
+pwm_deadtime_comp_output_t {
+  da
+  db
+  dc
+  comp_a
+  comp_b
+  comp_c
+  active_a
+  active_b
+  active_c
+}
+```
+
+算法：
+
+```text
+ia_synth = id*cos(theta_e) - iq*sin(theta_e)
+i_beta   = id*sin(theta_e) + iq*cos(theta_e)
+ib_synth = -0.5*ia_synth + sqrt(3)/2*i_beta
+ic_synth = -0.5*ia_synth - sqrt(3)/2*i_beta
+
+gain_x   = clamp((abs(i_synth_x) - current_zero) / (current_full - current_zero), 0, 1)
+active_x = enable && gain_x > 0
+sign_x   = +1 when i_synth_x > 0, else -1
+comp_x   = polarity * sign_x * comp_duty * gain_x when active_x else 0
+d_x_out  = clamp(d_x + comp_x, 0, 1)
+```
+
+当前默认值：
+
+```text
+Ts = 50 us
+DeadtimeCompDuty = 0.01000
+DeadtimeCompCurrentZero_A = 0.02 A
+DeadtimeCompCurrentFull_A = 0.10 A
+DeadtimeCompCurrentInvRange_1perA = 12.5 1/A
+DeadtimeCompPolarity = -1
+```
+
+生成 C 接口：
+
+```c
+extern void DeadtimeCompensationStep(const pwm_deadtime_comp_input_t
+  *rtu_comp_in, pwm_deadtime_comp_output_t *rty_comp_out);
+```
+
+验证命令：
+
+```bash
+matlab -batch "run('pwm_deadtime_compensation_mbd/run_pwm_deadtime_compensation_test.m')"
+matlab -batch "run('pwm_deadtime_compensation_mbd/generate_pwm_deadtime_compensation_code.m')"
+matlab -batch "cd('average-inverter/switching_sampling_study'); set(0,'DefaultFigureVisible','off'); run_switching_deadtime_motor_smoke_test"
+```
+
+当前结果：
+
+```text
+MBD functional test:
+  input dq = [id=0.0 iq=0.2] A, theta_e = 0 rad
+  synth current = [0.0 0.1732 -0.1732] A
+  duty_out = [0.05000 0.94000 0.51000]
+  comp = [-0.00000 -0.01000 0.01000]
+  active = [0 1 1]
+
+Switching plant smoke test:
+  deadtime compensation: enable=1, duty=0.01000, update=50.00 us
+  current source = dq_synthesized
+  id/iq = [0.0 0.2] A
+  current_zero/current_full = [0.02 0.10] A
+  ia/ib/ic pk-pk = [0.2731 1.1862 1.1045] A
+  deadtime comp range = a[-0 9.04e-06], b[-0.01 -0.01], c[0.01 0.01]
+  sum current RMS = 0 A
+```
+
+工程判断：
+
+```text
+死区补偿属于用户级算法 core，应该 MBD 化。
+优先用 dq 电流和电角度合成相电流极性，而不是直接依赖 ADC 相电流瞬时符号。
+小电流区不硬判极性；过渡区平滑放大；大电流区按合成相电流极性满补偿。
+开关 MOS、二极管、PMSM、电流纹波观察属于验证 harness，不强行 codegen。
+当前补偿参数是编译期默认参数；如果后续要台架在线标定，应把 Simulink.Parameter
+升级为 ExportedGlobal 或参数结构，而不是手改生成 C。
+```
+
+### 2026-06-11 补充：开关型验证必须跟随 MBD core 的接口语义
+
+这次修正了一个重要继承点：
+
+```text
+pwm_deadtime_compensation_mbd/ 已经使用 id/iq/sin_theta_e/cos_theta_e
+合成相电流极性。
+
+average-inverter/switching_sampling_study/ 的开关 MOS + PMSM 验证 harness
+也必须使用同一极性来源。
+```
+
+已完成修改：
+
+```text
+pwm_deadtime_compensation_mbd/build_pwm_deadtime_compensation_library.m
+  从 pwm_deadtime_compensation_model/DeadtimeCompensationStep 生成模块包内库：
+  pwm_deadtime_compensation_lib.slx/DeadtimeCompensationStep
+
+motor_control_modules/build_motor_control_module_library.m
+  将 DeadtimeCompensationStep 放入团队总库：
+  motor_control_lib.slx/DeadtimeCompensationStep
+
+build_switching_sampling_study_model.m
+  插入 motor_control_lib.slx/DeadtimeCompensationStep
+  只做接口适配：
+    theta_e_deg -> sin_theta_e/cos_theta_e
+    duty/id/iq/sin/cos -> pwm_deadtime_comp_input_t
+    pwm_deadtime_comp_output_t -> double duty/comp/active logging
+
+run_switching_deadtime_motor_smoke_test.m
+  报告 deadtime_comp_current_source = dq_synthesized
+  报告 id/iq、三相补偿 duty 范围、active 计数
+```
+
+当前验证：
+
+```text
+deadtime_comp_current_source = dq_synthesized
+deadtime_comp_id_A = 0
+deadtime_comp_iq_A = 0.2
+ia/ib/ic pk-pk = [0.2731 1.1862 1.1045] A
+deadtime_comp_range = a[-0 9.04e-06], b[-0.01 -0.01], c[0.01 0.01]
+Result: PASS
+```
+
+长期规则：
+
+```text
+MBD core 的输入、Bus、类型或信号物理语义变化后，必须同步检查：
+1. codegen 功能测试；
+2. 集成模型；
+3. 开关级/平均模型验证 harness；
+4. README 和 progress 记录。
+
+验证 harness 可以有 adapter，但不能复制算法内部实现。
+复用模块应该来自库块或 Model Reference；算法只维护一份。
+```
+
+## 2026-06-11：平均模型、开关模型和 MBD 边界
+
+新增专题文档：
+
+```text
+docs/modeling_scope_decision_guide.md
+```
+
+这次形成一个长期判断：
+
+```text
+平均电压模型是控制算法主干。
+开关型模型是 PWM/ADC/器件细节的显微镜。
+MBD 是可交付算法和稳定 adapter 的沉淀方式。
+物理 plant、验证 harness 和探索脚本不需要强行 MBD/codegen。
+```
+
+平均电压模型适合：
+
+```text
+1. 电流环、速度环、FOC 主链路。
+2. MTPA、弱磁、负载阶跃、速度阶跃等长时间仿真。
+3. Clarke/Park、SVPWM/duty、PI、observer 等算法接口验证。
+4. MBD 模块集成和 generated C 接口检查。
+```
+
+开关型模型适合：
+
+```text
+1. PWM 边沿和死区。
+2. 高占空比低边采样窗口。
+3. 中心采样与周期平均值误差。
+4. MOSFET/Diode 导通路径、续流和器件非理想。
+5. 零相量分配、DPWM、common-mode shift 对采样窗口和共模的影响。
+6. 单电阻/双电阻采样重构可行性。
+```
+
+MBD 化对象：
+
+```text
+Clarke/Park
+CurrentPiStep / SpeedPiStep
+DqToAbcDutyStep / SVPWM/duty adapter
+DeadtimeCompensationStep
+DeadtimeSamplingWindowStep
+observer / sensorless core
+在线参数辨识 core
+传感器校正、滤波、健康监测
+```
+
+保持原有仿真/研究形态的对象：
+
+```text
+Universal Bridge
+MOSFET / Diodes
+Simscape/SPS PMSM plant
+RL winding physical model
+powergui
+Scope / To Workspace / plot/report
+参数扫描脚本
+真实 CSV 数据分析脚本
+平台寄存器/HAL/驱动初始化
+```
+
+推荐工程流：
+
+```text
+平均模型先跑通控制。
+开关模型专项验证 PWM/ADC/死区问题。
+把验证得到的补偿、限制、valid 判定沉淀成 MBD 模块。
+用 generated C 进入平台适配层。
+硬件实测再反向修正参数和边界。
+```
+
+最重要的防错规则：
+
+```text
+不要用平均模型回答死区和采样窗口问题。
+不要用开关型模型承担所有控制算法长时间迭代。
+不要把物理 plant 强行生成 C。
+不要把平台寄存器/HAL 放进算法 MBD core。
+```

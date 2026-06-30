@@ -1,0 +1,3 @@
+case_name,B_nm_s_per_rad,iq_limit_a,no_load_speed_limit_rad_s,ideal_B0_accel_time_ms,exit_saturation_ms,saturated_time_ms,reach_98pct_ms,final_speed_rad_s,final_error_rad_s,max_iq_ref_a,final_iq_ref_a,saturated_at_end
+B0_pure_inertia,0,4,Inf,0.0688673942701228,0,0,7.5,40.0001039856623,-0.000103985662327943,0.0692330580204725,-8.40272029529651e-08,0
+B_setup_template,0.0001,4,197.480972587055,0.0688673942701228,0,0,NaN,19.6500298535527,20.3499701464473,0.398707922153527,0.398707922153527,0

@@ -1,0 +1,13 @@
+PMSM electrical parameter identification demo
+
+Truth and estimate
+  Rs_ohm        true 0.42 estimate 0.419958272 error -0.000099
+  Ld_H          true 0.00025 estimate 0.000251282979 error 0.005132
+  Lq_H          true 0.00036 estimate 0.000359821219 error -0.000497
+  psi_f_Wb      true 0.018 estimate 0.0179996804 error -0.000018
+  enc_offset    true 0.35 estimate 0.350011751 abs_error 1.1751322e-05
+
+Encoder residual
+  residual_rms_rad = 0.0159346812
+  residual_1x_rad  = 0.019961003
+  residual_2x_rad  = 0.0100054936

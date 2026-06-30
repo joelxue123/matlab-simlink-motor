@@ -1,0 +1,5 @@
+PWM dead-time compensation functional test
+da/db/dc = [0.0500000007 0.939999998 0.50999999]
+comp = [-0 -0.00999999978 0.00999999978]
+active = [0 1 1]
+Result: PASS

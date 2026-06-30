@@ -1,5 +1,7 @@
 # ADC Interrupt Current Loop Test
 
+标签：`[RESEARCH]`。这是电流环触发时序的专项验证目录，不是新的共享控制模块模板；其中 `grt` 和触发式实现只服务本专题分析。
+
 这个小测试用于比较两种电流环触发方式：
 
 ```text

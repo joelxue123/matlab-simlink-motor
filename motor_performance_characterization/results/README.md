@@ -13,4 +13,7 @@ current_sensor_harmonic_metrics.csv
 current_sensor_harmonic_regression_report.txt
 current_sensor_harmonic_regression.png
 current_sensor_fault_dq_timeseries.png
+current_torque_curve_data.csv
+current_torque_curve_report.txt
+current_torque_curve.png
 ```

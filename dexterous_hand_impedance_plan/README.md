@@ -1,5 +1,7 @@
 # Dexterous Hand Impedance Control Plan
 
+标签：`[LEGACY]` + `[RESEARCH]`。该目录保留历史建模和验证价值，但其 `grt`/`MATLAB Function` 路线不是当前新的嵌入式交付模板。
+
 这个文件夹用于整理灵巧手抓取包裹时的阻抗控制、降电流、降发热算法计划，后期用于 MATLAB、Simulink 和 Python 联合仿真。
 
 ## 核心问题

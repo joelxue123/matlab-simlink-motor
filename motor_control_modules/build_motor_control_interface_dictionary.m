@@ -38,6 +38,11 @@ upsert_alias_type(design_data, cfg.speedPiSpeedTypeName, cfg.floatBaseType, cfg.
 upsert_alias_type(design_data, cfg.speedPiCurrentTypeName, cfg.floatBaseType, cfg.typeHeaderFile);
 upsert_alias_type(design_data, cfg.speedPiGainTypeName, cfg.floatBaseType, cfg.typeHeaderFile);
 
+upsert_alias_type(design_data, cfg.deadtimeDutyTypeName, cfg.floatBaseType, cfg.typeHeaderFile);
+upsert_alias_type(design_data, cfg.deadtimeCurrentTypeName, cfg.floatBaseType, cfg.typeHeaderFile);
+upsert_alias_type(design_data, cfg.deadtimeTrigTypeName, cfg.floatBaseType, cfg.typeHeaderFile);
+upsert_alias_type(design_data, cfg.deadtimeBoolTypeName, cfg.boolBaseType, cfg.typeHeaderFile);
+
 upsert_bus_type(design_data, cfg.motorInputBusName, cfg.typeHeaderFile, { ...
     {'ia', cfg.currentTypeName}; ...
     {'ib', cfg.currentTypeName}; ...
@@ -89,6 +94,26 @@ upsert_bus_type(design_data, cfg.speedPiInputBusName, cfg.typeHeaderFile, { ...
 upsert_bus_type(design_data, cfg.speedPiOutputBusName, cfg.typeHeaderFile, { ...
     {'iq_ref', cfg.speedPiCurrentTypeName}});
 
+upsert_bus_type(design_data, cfg.deadtimeCompInputBusName, cfg.typeHeaderFile, { ...
+    {'da', cfg.deadtimeDutyTypeName}; ...
+    {'db', cfg.deadtimeDutyTypeName}; ...
+    {'dc', cfg.deadtimeDutyTypeName}; ...
+    {'id', cfg.deadtimeCurrentTypeName}; ...
+    {'iq', cfg.deadtimeCurrentTypeName}; ...
+    {'sin_theta_e', cfg.deadtimeTrigTypeName}; ...
+    {'cos_theta_e', cfg.deadtimeTrigTypeName}});
+
+upsert_bus_type(design_data, cfg.deadtimeCompOutputBusName, cfg.typeHeaderFile, { ...
+    {'da', cfg.deadtimeDutyTypeName}; ...
+    {'db', cfg.deadtimeDutyTypeName}; ...
+    {'dc', cfg.deadtimeDutyTypeName}; ...
+    {'comp_a', cfg.deadtimeDutyTypeName}; ...
+    {'comp_b', cfg.deadtimeDutyTypeName}; ...
+    {'comp_c', cfg.deadtimeDutyTypeName}; ...
+    {'active_a', cfg.deadtimeBoolTypeName}; ...
+    {'active_b', cfg.deadtimeBoolTypeName}; ...
+    {'active_c', cfg.deadtimeBoolTypeName}});
+
 upsert_parameter(design_data, 'Kp_id', params.Kp_id, cfg.currentPiGainTypeName);
 upsert_parameter(design_data, 'Ki_id', params.Ki_id, cfg.currentPiGainTypeName);
 upsert_parameter(design_data, 'Kaw_id', params.Kaw_id, cfg.currentPiGainTypeName);
@@ -101,6 +126,13 @@ upsert_parameter(design_data, 'Kp_speed', params.Kp_speed, cfg.speedPiGainTypeNa
 upsert_parameter(design_data, 'Ki_speed', params.Ki_speed, cfg.speedPiGainTypeName);
 upsert_parameter(design_data, 'Kaw_speed', params.Kaw_speed, cfg.speedPiGainTypeName);
 upsert_parameter(design_data, 'IqLimitDefault', params.IqLimitDefault, cfg.speedPiCurrentTypeName);
+
+upsert_parameter(design_data, 'DeadtimeCompEnable', params.DeadtimeCompEnable, cfg.deadtimeBoolTypeName);
+upsert_parameter(design_data, 'DeadtimeCompDuty', params.DeadtimeCompDuty, cfg.deadtimeDutyTypeName);
+upsert_parameter(design_data, 'DeadtimeCompCurrentZero_A', params.DeadtimeCompCurrentZero_A, cfg.deadtimeCurrentTypeName);
+upsert_parameter(design_data, 'DeadtimeCompCurrentFull_A', params.DeadtimeCompCurrentFull_A, cfg.deadtimeCurrentTypeName);
+upsert_parameter(design_data, 'DeadtimeCompCurrentInvRange_1perA', params.DeadtimeCompCurrentInvRange_1perA, cfg.deadtimeDutyTypeName);
+upsert_parameter(design_data, 'DeadtimeCompPolarity', params.DeadtimeCompPolarity, cfg.deadtimeDutyTypeName);
 
 upsert_entry(design_data, 'simcfg', params.simcfg);
 upsert_entry(design_data, 'current_pi_simcfg', params.current_pi_simcfg);
@@ -136,6 +168,11 @@ cfg.speedPiSpeedTypeName = 'T_SpeedPiSpeed';
 cfg.speedPiCurrentTypeName = 'T_SpeedPiCurrent';
 cfg.speedPiGainTypeName = 'T_SpeedPiGain';
 
+cfg.deadtimeDutyTypeName = 'T_DeadtimeCompDuty';
+cfg.deadtimeCurrentTypeName = 'T_DeadtimeCompCurrent';
+cfg.deadtimeTrigTypeName = 'T_DeadtimeCompTrig';
+cfg.deadtimeBoolTypeName = 'T_DeadtimeCompBool';
+
 cfg.motorInputBusName = 'motor_t';
 cfg.motorDqBusName = 'motor_dq_t';
 cfg.openLoopCmdBusName = 'open_loop_cmd_t';
@@ -145,8 +182,11 @@ cfg.currentPiInputBusName = 'current_pi_input_t';
 cfg.currentPiOutputBusName = 'current_pi_output_t';
 cfg.speedPiInputBusName = 'speed_pi_input_t';
 cfg.speedPiOutputBusName = 'speed_pi_output_t';
+cfg.deadtimeCompInputBusName = 'pwm_deadtime_comp_input_t';
+cfg.deadtimeCompOutputBusName = 'pwm_deadtime_comp_output_t';
 
 cfg.floatBaseType = 'single';
+cfg.boolBaseType = 'boolean';
 end
 
 function p = default_motor_control_params()
@@ -191,6 +231,14 @@ p.Kp_speed = single(2 * speed_bandwidth_rad_s * J / torque_constant);
 p.Ki_speed = single(speed_bandwidth_rad_s^2 * J / torque_constant);
 p.Kaw_speed = single(40);
 p.IqLimitDefault = single(p.inverter.current_limit);
+
+p.DeadtimeCompEnable = true;
+p.DeadtimeCompDuty = single(0.01000);
+p.DeadtimeCompCurrentZero_A = single(0.02);
+p.DeadtimeCompCurrentFull_A = single(0.10);
+p.DeadtimeCompCurrentInvRange_1perA = single( ...
+    1.0 / double(p.DeadtimeCompCurrentFull_A - p.DeadtimeCompCurrentZero_A));
+p.DeadtimeCompPolarity = single(-1.0);
 
 p.openloop.vd = single(0);
 p.openloop.vq = single(8);
