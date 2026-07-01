@@ -23,7 +23,7 @@ assignin('base', 'GJDT_SpeedKp', single(module_config.speed_loop.speed_kp));
 assignin('base', 'GJDT_SpeedKi', single(module_config.speed_loop.speed_ki));
 assignin('base', 'GJDT_SpeedKaw', single(module_config.speed_loop.speed_kaw));
 assignin('base', 'GJDT_SpeedIqLimit_A', ...
-    single(module_config.speed_loop.iq_limit_default_a));
+    single(module_config.speed_loop.bringup_iq_limit_a));
 
 % design_green_joint_speed_loop.m is script-style and clears the caller
 % workspace, so restore local path variables before touching the dictionary.
@@ -52,7 +52,7 @@ fprintf('  Ki_speed             = %.9g A/rad\n', ...
     double(evalin('base', 'GJDT_SpeedKi')));
 fprintf('  Kaw_speed            = %.9g 1/s\n', ...
     double(evalin('base', 'GJDT_SpeedKaw')));
-fprintf('  IqLimitDefault       = %.9g A\n', ...
+fprintf('  IqLimitBringup       = %.9g A\n', ...
     double(evalin('base', 'GJDT_SpeedIqLimit_A')));
 
 function sync_speed_dictionary(dictionary_file)
@@ -69,9 +69,10 @@ upsert_parameter(section, 'Ki_speed', ...
 upsert_parameter(section, 'Kaw_speed', ...
     double(evalin('base', 'GJDT_SpeedKaw')), ...
     'T_SpeedPiGain', 'Auto');
-upsert_parameter(section, 'IqLimitDefault', ...
+upsert_parameter(section, 'IqLimitBringup', ...
     double(evalin('base', 'GJDT_SpeedIqLimit_A')), ...
     'T_SpeedPiCurrent', 'Auto');
+delete_entry_if_exists(section, 'IqLimitDefault');
 
 saveChanges(dd);
 end
@@ -85,6 +86,13 @@ entry = find(section, 'Name', name);
 if isempty(entry)
     addEntry(section, name, parameter);
 else
-    setValue(entry(1), parameter);
+        setValue(entry(1), parameter);
+    end
+end
+
+function delete_entry_if_exists(section, name)
+entry = find(section, 'Name', name);
+if ~isempty(entry)
+    deleteEntry(section, name);
 end
 end

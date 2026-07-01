@@ -177,6 +177,50 @@ Kp/Ki = 1.0 / 20000.0
 Vbus = 12 V
 ```
 
+### mit_impedance_1615_step
+
+用途：
+
+```text
+验证 MIT MBD core 在 1615 输出端机械参数下，通过完整 V1 平均电压物理链的位置阶跃响应。
+MIT 输出必须进入 GreenJointCurrentLoopStep，不再使用一阶电流环近似作为主线结论。
+```
+
+当前入口：
+
+```text
+../green_joint_average_motor_twin_model.slx
+../run_green_joint_average_motor_mit_step_test.m
+```
+
+长期归属：
+
+```text
+TestSupervisor.MitImpedanceStep
+GreenJointControllerWrapper.mit_current
+PlantWrapper.average_v1
+```
+
+参数：
+
+```text
+pos_target = 0.2 rad
+Ts_mit = 50 us
+MIT design = 15 Hz, zeta = 1, converted to current-domain protocol gains
+iq_limit = variant contract default: 2 A for 1615, 4 A for 1620
+plant = DqToAbcDutyStep + Average-Value Inverter + Surface Mount PMSM + PLL feedback
+```
+
+必须记录：
+
+```text
+overshoot
+settling_time
+iq_ref_abs_max
+iq_saturation
+final_position_error
+```
+
 ## 计划场景
 
 ### current_saturation_exit_4A_to_1p5A
@@ -255,12 +299,14 @@ iq_ref_max
 voltage_mag_norm_max
 ```
 
-基于用户提供的转子惯量 `0.034 kg*mm^2` 的初始设计：
+基于当前 1615 输出端机械辨识的主线设计：
 
 ```text
 gear_ratio = 183.35
-J_motor = 0.034 kg*mm^2 = 3.4e-8 kg*m^2
-J_speed_loop = J_motor * gear_ratio = 6.2339e-6 kg*m^2
+J_output_equivalent = 0.00132792306138 kg*m^2
+B_output_equivalent = 0.0109757550501 N*m*s/rad
+J_speed_loop = J_output_equivalent / gear_ratio = 7.24255828e-6 kg*m^2
+B_speed_loop = B_output_equivalent / gear_ratio = 5.98623128e-5 N*m*s/rad
 Kt_rated = 2.56e-3 / 0.4949 = 0.00517276217 N*m/A
 Kt_peak = 7.33e-3 / 1.4847 = 0.00493702431 N*m/A
 Kt_default = Kt_rated
@@ -271,8 +317,8 @@ production candidate bandwidth = 40 Hz, after hardware validation
 20 Hz 安全启动参数：
 
 ```text
-Kp_speed = 0.302884591 A/(rad/s)
-Ki_speed = 19.0308001 A/rad
+Kp_speed = 0.340319362 A/(rad/s)
+Ki_speed = 22.1100241 A/rad
 Kaw_speed = 125.663706 1/s
 iq_limit_initial = 0.1 A
 ```
@@ -280,8 +326,8 @@ iq_limit_initial = 0.1 A
 40 Hz 候选参数：
 
 ```text
-Kp_speed = 0.605769182 A/(rad/s)
-Ki_speed = 76.1232005 A/rad
+Kp_speed = 0.692211324 A/(rad/s)
+Ki_speed = 88.4400964 A/rad
 Kaw_speed = 251.327412 1/s
 ```
 
@@ -326,8 +372,8 @@ voltage_mag_norm max   = 0.668392
 
 ```text
 SpeedPiStep 输入速度是输出端 joint-side rad/s，输出是电机端 Iq A。
-速度环等效惯量使用 J_motor * gear_ratio + J_load_output / gear_ratio。
-motor.B 默认 0，等待辨识；不要继承旧 average-inverter 示例的 1e-4 阻尼。
+速度环等效惯量使用 J_output_equivalent / gear_ratio。
+motor.B 来自输出端辨识阻尼折算；不要继承旧 average-inverter 示例的 1e-4 阻尼。
 ```
 
 ### speed_high_speed_voltage_limit_average_motor_v1

@@ -117,11 +117,11 @@ defaults.Kp_speed = single( ...
 defaults.Ki_speed = single( ...
     speed_bandwidth_rad_s^2 * motor.J / motor.torque_constant);
 defaults.Kaw_speed = single(40);
-defaults.IqLimitDefault = single(15);
+defaults.IqLimitBringup = single(15);
 
 defaults.test.wm_ref = single(400 * 2 * pi / 60);
 defaults.test.wm_initial = single(0);
-defaults.test.iq_limit = defaults.IqLimitDefault;
+defaults.test.iq_limit = defaults.IqLimitBringup;
 defaults.test.load_torque = single(0);
 defaults.test.torque_constant = single(motor.torque_constant);
 defaults.test.J = single(motor.J);
@@ -157,7 +157,8 @@ upsert_bus_type(design_data, cfg.outputBusName, cfg.typeHeaderFile, { ...
 upsert_parameter(design_data, 'Kp_speed', defaults.Kp_speed, cfg.gainTypeName, cfg);
 upsert_parameter(design_data, 'Ki_speed', defaults.Ki_speed, cfg.gainTypeName, cfg);
 upsert_parameter(design_data, 'Kaw_speed', defaults.Kaw_speed, cfg.gainTypeName, cfg);
-upsert_parameter(design_data, 'IqLimitDefault', defaults.IqLimitDefault, cfg.currentTypeName, cfg);
+upsert_parameter(design_data, 'IqLimitBringup', defaults.IqLimitBringup, cfg.currentTypeName, cfg);
+delete_entry_if_exists(design_data, 'IqLimitDefault');
 
 saveChanges(dd);
 close(dd);
@@ -226,6 +227,13 @@ else
         end
     end
     setValue(entry(1), parameter);
+end
+end
+
+function delete_entry_if_exists(section, name)
+entry = find(section, 'Name', name);
+if ~isempty(entry)
+    deleteEntry(section, name);
 end
 end
 

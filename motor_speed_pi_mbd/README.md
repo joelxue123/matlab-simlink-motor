@@ -112,7 +112,7 @@ extern void SpeedPiStep(const speed_pi_input_t *rtu_speed_in,
   the `50us` current loop but fast enough to avoid the old 500us scheduling
   bottleneck.
 - The output `iq_ref` is the command for the q-axis current loop.
-- Parameters `Kp_speed`, `Ki_speed`, `Kaw_speed`, and `IqLimitDefault` live in
+- Parameters `Kp_speed`, `Ki_speed`, `Kaw_speed`, and `IqLimitBringup` live in
   the `.sldd`.
 - Controller-facing scalar types are `Simulink.AliasType('single')`.
 - Baseline gains are derived from `average-inverter/motor_control_params.m`.

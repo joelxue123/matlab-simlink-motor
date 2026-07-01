@@ -25,6 +25,11 @@ gjdt_setup_speed_estimator_mbd_dir = fullfile(gjdt_setup_repo_dir, ...
 if ~contains(path, gjdt_setup_speed_estimator_mbd_dir)
     addpath(gjdt_setup_speed_estimator_mbd_dir);
 end
+gjdt_setup_mit_mbd_dir = fullfile(gjdt_setup_repo_dir, ...
+    'green_joint_mit_impedance_mbd');
+if ~contains(path, gjdt_setup_mit_mbd_dir)
+    addpath(gjdt_setup_mit_mbd_dir);
+end
 
 GJDT_Ts = 50e-6;
 GJDT_TsSpeed = 100e-6;
@@ -38,6 +43,10 @@ end
 GJDT_ModuleConfig = load_green_joint_module_config( ...
     gjdt_setup_green_joint_fw_dir, GJDT_MotorType);
 GJDT_GearRatio = GJDT_ModuleConfig.gear_ratio;
+GJDT_ControlModeCurrent = int32(0);
+GJDT_ControlModeSpeed = int32(1);
+GJDT_ControlModeMit = int32(2);
+GJDT_ControlMode = GJDT_ControlModeCurrent;
 GJDT_UseSpeedLoop = 0;
 GJDT_Vbus_V = single(12.0);
 GJDT_IdRef_A = single(0.0);
@@ -48,6 +57,13 @@ GJDT_SpeedRefStepTime_s = 0.005;
 GJDT_SpeedRefBefore_rad_s = single(0.0);
 GJDT_SpeedRefAfter_rad_s = single(4.0);
 GJDT_SpeedIqLimit_A = single(4.0);
+GJDT_MitPosStepTime_s = 0.020;
+GJDT_MitPosBefore_Rad = single(0.0);
+GJDT_MitPosAfter_Rad = single(0.20);
+GJDT_MitVelTarget_RadS = single(0.0);
+GJDT_MitFfTorque_Nm = single(0.0);
+GJDT_MitBandwidth_Hz = 15.0;
+GJDT_MitDampingRatio = 1.0;
 
 line_to_line_resistance_ohm = GJDT_ModuleConfig.line_to_line_resistance_ohm;
 line_to_line_inductance_h = GJDT_ModuleConfig.line_to_line_inductance_h;
@@ -56,12 +72,22 @@ rotor_inertia_kg_mm2 = GJDT_ModuleConfig.rotor_inertia_kg_m2 * 1e6;
 GJDT_Rs_Ohm = GJDT_ModuleConfig.phase_resistance_ohm;
 GJDT_Ld_H = GJDT_ModuleConfig.phase_inductance_h;
 GJDT_Lq_H = GJDT_ModuleConfig.phase_inductance_h;
+GJDT_CurrentLoopRs_Ohm = GJDT_ModuleConfig.current_loop.effective_phase_resistance_ohm;
+GJDT_CurrentLoopLd_H = GJDT_ModuleConfig.current_loop.effective_phase_inductance_h;
+GJDT_CurrentLoopLq_H = GJDT_ModuleConfig.current_loop.effective_phase_inductance_h;
+GJDT_CurrentLoopDesignPhaseMargin_Deg = ...
+    GJDT_ModuleConfig.current_loop.design_phase_margin_deg;
+GJDT_CurrentLoopDesignDelay_s = GJDT_ModuleConfig.current_loop.design_delay_s;
 GJDT_CurrentBandwidth_Hz = GJDT_ModuleConfig.current_loop.reference_bandwidth_hz;
 GJDT_CurrentBandwidth_RadPerSec = 2 * pi * GJDT_CurrentBandwidth_Hz;
-GJDT_CurDKp_Physical = single(GJDT_Ld_H * GJDT_CurrentBandwidth_RadPerSec);
-GJDT_CurDKi_Physical = single(GJDT_Rs_Ohm * GJDT_CurrentBandwidth_RadPerSec);
-GJDT_CurQKp_Physical = single(GJDT_Lq_H * GJDT_CurrentBandwidth_RadPerSec);
-GJDT_CurQKi_Physical = single(GJDT_Rs_Ohm * GJDT_CurrentBandwidth_RadPerSec);
+GJDT_CurDKp_Physical = single(GJDT_CurrentLoopLd_H ...
+    * GJDT_CurrentBandwidth_RadPerSec);
+GJDT_CurDKi_Physical = single(GJDT_CurrentLoopRs_Ohm ...
+    * GJDT_CurrentBandwidth_RadPerSec);
+GJDT_CurQKp_Physical = single(GJDT_CurrentLoopLq_H ...
+    * GJDT_CurrentBandwidth_RadPerSec);
+GJDT_CurQKi_Physical = single(GJDT_CurrentLoopRs_Ohm ...
+    * GJDT_CurrentBandwidth_RadPerSec);
 GJDT_CurDKp = single(GJDT_ModuleConfig.current_loop.cur_d_kp);
 GJDT_CurDKi = single(GJDT_ModuleConfig.current_loop.cur_d_ki);
 GJDT_CurQKp = single(GJDT_ModuleConfig.current_loop.cur_q_kp);
@@ -113,6 +139,23 @@ motor.speed_loop_equiv_inertia_kg_m2 = ...
 motor.speed_loop_equiv_damping_nm_s_per_rad = ...
     motor.output_viscous_damping_nm_s_per_rad / motor.gear_ratio;
 
+mit_wn_rad_s = 2 * pi * GJDT_MitBandwidth_Hz;
+mit_kp_nm_per_rad = motor.output_equivalent_inertia_kg_m2 ...
+    * mit_wn_rad_s ^ 2;
+mit_kd_nm_s_per_rad = max(0.0, ...
+    2 * GJDT_MitDampingRatio * motor.output_equivalent_inertia_kg_m2 ...
+    * mit_wn_rad_s - motor.output_viscous_damping_nm_s_per_rad);
+GJDT_MitKtOutput_NmPerA = single(motor.torque_constant * motor.gear_ratio);
+GJDT_MitTorqueToIq_APerNm = single(1.0 / ...
+    double(GJDT_MitKtOutput_NmPerA));
+GJDT_MitKp_NmPerRad = single(mit_kp_nm_per_rad);
+GJDT_MitKd_NmSPerRad = single(mit_kd_nm_s_per_rad);
+GJDT_MitKp_APerRad = single(mit_kp_nm_per_rad / ...
+    double(GJDT_MitKtOutput_NmPerA));
+GJDT_MitKd_APerRadS = single(mit_kd_nm_s_per_rad / ...
+    double(GJDT_MitKtOutput_NmPerA));
+GJDT_MitIqLimit_A = single(GJDT_ModuleConfig.defaults.torque_limit_a);
+
 GJDT_OutputEquivalentInertia_kg_m2 = motor.output_equivalent_inertia_kg_m2;
 GJDT_OutputViscousDamping_Nm_s_per_rad = ...
     motor.output_viscous_damping_nm_s_per_rad;
@@ -122,8 +165,10 @@ GJDT_MotorShaftEquivalentInertia_kg_m2 = motor.J;
 GJDT_MotorShaftViscousDamping_Nm_s_per_rad = motor.B;
 
 clear line_to_line_resistance_ohm line_to_line_inductance_h rotor_inertia_kg_mm2;
+clear mit_wn_rad_s mit_kp_nm_per_rad mit_kd_nm_s_per_rad;
 clear gjdt_setup_script_dir gjdt_setup_repo_dir gjdt_setup_green_joint_mbd_dir;
 clear gjdt_setup_speed_mbd_dir gjdt_setup_speed_estimator_mbd_dir;
+clear gjdt_setup_mit_mbd_dir;
 clear gjdt_setup_workspace_dir gjdt_setup_green_joint_fw_dir;
 
 function cfg = load_green_joint_module_config(fw_dir, motor_type)
@@ -142,5 +187,23 @@ if abs(cfg.phase_resistance_ohm - expected_phase_r) > 1e-9
 end
 if abs(cfg.phase_inductance_h - expected_phase_l) > 1e-12
     error('Invalid phase inductance in %s.', config_file);
+end
+if ~isfield(cfg.current_loop, 'effective_phase_resistance_ohm')
+    cfg.current_loop.effective_phase_resistance_ohm = cfg.phase_resistance_ohm;
+end
+if ~isfield(cfg.current_loop, 'effective_phase_inductance_h')
+    cfg.current_loop.effective_phase_inductance_h = cfg.phase_inductance_h;
+end
+if ~isfield(cfg.current_loop, 'design_phase_margin_deg')
+    cfg.current_loop.design_phase_margin_deg = 60.0;
+end
+if ~isfield(cfg.current_loop, 'design_delay_s')
+    cfg.current_loop.design_delay_s = 75e-6;
+end
+if cfg.current_loop.effective_phase_resistance_ohm <= 0
+    error('Invalid effective current-loop resistance in %s.', config_file);
+end
+if cfg.current_loop.effective_phase_inductance_h <= 0
+    error('Invalid effective current-loop inductance in %s.', config_file);
 end
 end

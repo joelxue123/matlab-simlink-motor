@@ -999,7 +999,8 @@ docs/ai_collaboration_rules.md
 - 明确 `motor_*_mbd/` 和 `motor_control_modules/` 是现代可交付主线。
 - 明确 `average-inverter/` 是研究平台，不是新的嵌入式交付模板。
 - 明确 `dexterous_hand_impedance_plan/`、`主动阻尼控制/` 等旧路径属于 legacy。
-- 明确 `green-joint/` 仍是手写固件主线，尚未与 MBD 生成代码完全闭环。
+- 历史记录：当时 `green-joint/` 仍以手写固件为主。当前主线已推进到
+  电流环、速度环、速度 PLL、MIT 由 MBD 生成代码和 adapter 接管，位置环/状态机仍需继续闭环。
 
 使用方式：
 

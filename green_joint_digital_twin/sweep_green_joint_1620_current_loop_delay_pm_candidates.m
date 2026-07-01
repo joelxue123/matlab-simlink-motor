@@ -31,6 +31,8 @@ cfg.stop_time = 0.010;
 cfg.vbus = 12.0;
 cfg.rs = module_cfg.phase_resistance_ohm;
 cfg.lq = module_cfg.phase_inductance_h;
+cfg.design_rs = module_cfg.current_loop.effective_phase_resistance_ohm;
+cfg.design_lq = module_cfg.current_loop.effective_phase_inductance_h;
 cfg.voltage_limit = cfg.vbus ...
     * module_cfg.current_loop.voltage_limit_ratio ...
     * module_cfg.current_loop.voltage_modulation_ratio;
@@ -45,7 +47,7 @@ cfg.feedback_alpha = 0.95;
 rows = [];
 for bandwidth_hz = cfg.bandwidth_hz_list
     for phase_margin_deg = cfg.phase_margin_deg_list
-        design = design_delay_pm_pi(cfg.rs, cfg.lq, bandwidth_hz, ...
+        design = design_delay_pm_pi(cfg.design_rs, cfg.design_lq, bandwidth_hz, ...
             phase_margin_deg, cfg.design_delay_s);
         for sim_delay_s = cfg.sim_delay_s_list
             square_result = simulate_square(cfg, design.kp, design.ki, ...
@@ -270,5 +272,11 @@ if abs(cfg.phase_resistance_ohm - expected_phase_r) > 1e-9
 end
 if abs(cfg.phase_inductance_h - expected_phase_l) > 1e-12
     error('Invalid phase inductance in %s.', config_file);
+end
+if ~isfield(cfg.current_loop, 'effective_phase_resistance_ohm')
+    cfg.current_loop.effective_phase_resistance_ohm = cfg.phase_resistance_ohm;
+end
+if ~isfield(cfg.current_loop, 'effective_phase_inductance_h')
+    cfg.current_loop.effective_phase_inductance_h = cfg.phase_inductance_h;
 end
 end

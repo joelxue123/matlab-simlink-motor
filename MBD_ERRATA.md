@@ -1658,3 +1658,64 @@ PLL/速度估算器默认值必须同时看：
 
 预防规则：
 ```
+
+## ERR-2026-06-30-002：MIT MBD 采样周期误写为 100us
+
+日期：2026-06-30
+状态：已修复
+严重程度：中
+
+错误判断：
+
+```text
+把 GreenJointMitImpedanceStep 的 MBD root fixed-step / smoke harness sample time
+设为 100us，混用了速度环 100us 周期。
+```
+
+正确结论：
+
+```text
+green-joint 固件 INPUT_MODE_MIT 分支没有 ISR_Counter % 2 分频。
+mit_control() 在每个 50us FOC/current ISR 中调用，因此 MIT MBD core 的主线周期是：
+  Ts_mit = 50us
+  frequency = 20kHz
+```
+
+证据：
+
+```text
+green-joint/Core/Src/main.c:
+  INPUT_MODE_MIT 直接调用 mit_control(...)
+  CONTROL_MODE_POSITION / CONTROL_MODE_VELOCITY 才有 ISR_Counter % 2 分频
+
+green-joint/Platform/Inc/hw_common_config.h:
+  PWM_FREQ_HZ = 40000
+  ADC_ISR_DIVIDER = 2
+  SPEED_SAMPLE_BASE_DT_S = 2 / 40000 = 50us
+```
+
+影响：
+
+```text
+1. 数字孪生会错误表达 MIT 与电流环之间的速率关系。
+2. 后续位置环/MIT 联调可能错误加入 100us 延迟。
+3. 文档和脚本会误导 AI 把速度环周期套到 MIT core。
+```
+
+修复：
+
+```text
+1. green_joint_mit_impedance_mbd/build_green_joint_mit_impedance_model.m:
+   cfg.sampleTime 和 defaults.simcfg.Ts_mit 改为 50e-6。
+2. green_joint_average_motor_twin_model.slx:
+   MIT 通过 GJDT_ControlMode=2 接入统一 V1，和 current loop 同 50us。
+3. 文档记录 MIT 主线入口和 50us 周期合同。
+```
+
+预防规则：
+
+```text
+控制模块采样周期必须从固件真实调用点反查，不能从相邻模块猜测。
+速度环 100us 只适用于 SpeedPiStep/position-speed cascade，不适用于 MIT。
+任何 MBD source model 改周期后，都要同步 digital twin、README 和 errata。
+```

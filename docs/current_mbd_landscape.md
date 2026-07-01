@@ -340,5 +340,6 @@
 当前真正该继承的是 modern *_mbd 模块主线；
 average-inverter 继续做研究平台；
 旧的 grt / MATLAB Function / Nonreusable 路线要明确打上 legacy 标识；
-green-joint 仍是手写固件主线，尚未与 MBD 生成代码完全闭环。
+green-joint 已进入 MBD/adapter 分层主线：电流环、速度环、速度 PLL、MIT 已有
+MBD 生成代码和固件 adapter；位置环、状态机和完整 unified test harness 仍需继续闭环。
 ```

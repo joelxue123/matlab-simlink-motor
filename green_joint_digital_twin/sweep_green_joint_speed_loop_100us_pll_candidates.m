@@ -130,8 +130,9 @@ section = getSection(dd, 'Design Data');
 upsert_parameter(section, 'Kp_speed', tuning.kp, 'T_SpeedPiGain');
 upsert_parameter(section, 'Ki_speed', tuning.ki, 'T_SpeedPiGain');
 upsert_parameter(section, 'Kaw_speed', tuning.kaw, 'T_SpeedPiGain');
-upsert_parameter(section, 'IqLimitDefault', tuning.iq_limit_a, ...
+upsert_parameter(section, 'IqLimitBringup', tuning.iq_limit_a, ...
     'T_SpeedPiCurrent');
+delete_entry_if_exists(section, 'IqLimitDefault');
 saveChanges(dd);
 end
 
@@ -156,7 +157,14 @@ entry = find(section, 'Name', name);
 if isempty(entry)
     addEntry(section, name, parameter);
 else
-    setValue(entry(1), parameter);
+        setValue(entry(1), parameter);
+    end
+end
+
+function delete_entry_if_exists(section, name)
+entry = find(section, 'Name', name);
+if ~isempty(entry)
+    deleteEntry(section, name);
 end
 end
 

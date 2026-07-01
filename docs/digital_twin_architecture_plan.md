@@ -4,6 +4,15 @@
 `green-joint` 数字孪生的长期搭建路线。后续 AI 接手数字孪生任务时，先读本文件，
 不要重新从零扫描和重建一套模型。
 
+最终主线纪律入口：
+
+```text
+../green_joint_digital_twin/FINAL_MAINLINE_ARCHITECTURE.md
+```
+
+该文件优先级高于本文中的历史阶段性描述；如果发现冲突，以最终主线架构为准，
+并同步修正本文。
+
 ## 目标
 
 数字孪生不是单个 Simulink 模型，而是一条可逐步闭环的工程链：
@@ -147,6 +156,7 @@ matlab -batch "run('matlab-practice/green_joint_digital_twin/run_green_joint_ave
 | 目录 | 角色 | 数字孪生用途 |
 | --- | --- | --- |
 | `green_joint_current_loop_mbd/` | green-joint 电流 PI-only 替换模块 | 当前主线，作为 Model Reference 接入 digital twin |
+| `green_joint_mit_impedance_mbd/` | green-joint MIT 阻抗控制模块 | 当前主线，输出电机端 `iq_ref_a`，固件 adapter 已接入 |
 | `motor_control_modules/` | 团队共享控制模块库 | 后续复用 Speed/Current PI、Clarke/Park、DqToDuty、DeadtimeComp |
 | `motor_clarke_park_struct/` | Clarke/Park + Bus 类型示例 | 接入真实 `ia/ib/ic/theta_e` 反馈 |
 | `motor_current_pi_mbd/` | 通用 dq Current PI | 可作为 green-joint PI 方案对照 |
@@ -403,6 +413,7 @@ green_joint_digital_twin/
   controller_wrapper/
     current_only
     speed_current
+    mit_current
     position_speed_current
   plant_wrapper/
     average_v1
