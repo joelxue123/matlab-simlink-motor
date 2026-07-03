@@ -1,3 +1,4 @@
+
 %% Green-joint 1615 MIT mode numeric simulation
 %
 % This scenario mirrors the current firmware MIT path:

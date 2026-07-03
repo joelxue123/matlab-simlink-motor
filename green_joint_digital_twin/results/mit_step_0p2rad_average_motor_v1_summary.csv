@@ -1,2 +1,2 @@
 scenario,motor_type,gear_ratio,mit_bandwidth_hz,mit_damping_ratio,mit_kp_nm_per_rad,mit_kd_nm_s_per_rad,mit_kp_a_per_rad,mit_kd_a_per_rad_s,iq_limit_a,final_ref_rad,final_joint_pos_rad,final_error_rad,overshoot_pct,settling_time_s,iq_ref_abs_max_a,iq_abs_max_a,voltage_mag_norm_max
-mit_step_0p2rad_average_motor_v1,1615,183.35,15,1,11.795467376709,0.239331841468811,12.4368886947632,0.252346366643906,4,0.200000002980232,0.0162603911012411,0.183739617466927,0,NaN,2.487378,2.115812,1
+mit_step_0p2rad_average_motor_v1,1615,183.35,15,1,11.795467376709,0.239331841468811,12.4368886947632,0.252346366643906,2,0.200000002980232,0.0157554037868977,0.184244602918625,0,NaN,2,1.893107,1
