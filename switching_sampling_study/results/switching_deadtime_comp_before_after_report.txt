@@ -1,0 +1,15 @@
+before_ia_pkpk_A = 1.37882086
+before_ib_pkpk_A = 1.56365601
+before_ic_pkpk_A = 1.23293446
+before_max_abs_current_A = 1.56365601
+before_sum_current_rms_A = 0
+after_ia_pkpk_A = 1.34588217
+after_ib_pkpk_A = 1.52672927
+after_ic_pkpk_A = 1.20266392
+after_max_abs_current_A = 1.52672927
+after_sum_current_rms_A = 0
+delta_ia_rms_A = 0.0178046709
+delta_ib_rms_A = 0.0334756993
+delta_ic_rms_A = 0.0201259074
+delta_max_abs_A = 0.0431240193
+output_png = /home/user/study/AI+MOTOR/matlab-practice/average-inverter/switching_sampling_study/results/switching_deadtime_comp_before_after.png

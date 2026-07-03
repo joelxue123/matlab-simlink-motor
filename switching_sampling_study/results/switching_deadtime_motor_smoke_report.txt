@@ -1,0 +1,25 @@
+Switching deadtime motor smoke test
+model = switching_deadtime_motor_model
+Vdc = 12 V
+PWM = 20000 Hz
+dead_time = 5e-07 s
+deadtime_comp_enable = 1
+deadtime_comp_update = 5e-05 s
+deadtime_comp_duty = 0.01
+deadtime_comp_current_source = dq_synthesized
+deadtime_comp_id_A = 0
+deadtime_comp_iq_A = 0.2
+deadtime_comp_current_zero_A = 0.02
+deadtime_comp_current_full_A = 0.1
+deadtime_comp_polarity = -1
+R = 4 ohm
+L = 0.0001 H
+sim_stop_time = 0.002 s
+ia_pkpk_A = 1.34588217
+ib_pkpk_A = 1.52672927
+ic_pkpk_A = 1.20266392
+deadtime_comp_range = a[-0 0.00999999978], b[-0.00999999978 -0.00999999978], c[-0 0.00999999978]
+deadtime_active_count = [72001 80001 76000]
+sum_current_rms_A = 0
+max_abs_current_A = 1.52672927
+Result: PASS

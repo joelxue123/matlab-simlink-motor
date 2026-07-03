@@ -1,8 +1,12 @@
-function mdl = build_switching_sampling_study_model()
+function mdl = build_switching_sampling_study_model(ss_cfg)
 %BUILD_SWITCHING_SAMPLING_STUDY_MODEL Create a first-stage PWM timing model.
 
-switching_sampling_study_config;
+if nargin < 1
+    switching_sampling_study_config;
+end
 mdl = ss_cfg.model_name;
+assignin('base', 'ss_cfg', ss_cfg);
+deadtime_comp_module = local_prepare_deadtime_compensation_module(ss_cfg);
 
 if bdIsLoaded(mdl)
     close_system(mdl, 0);
@@ -13,6 +17,7 @@ end
 
 new_system(mdl);
 open_system(mdl);
+set_param(mdl, 'DataDictionary', deadtime_comp_module.dictionaryName);
 set_param(mdl, ...
     'StopTime', 'max(ss_cfg.sim_stop_time, 1/ss_cfg.electrical_freq_hz)', ...
     'Solver', 'FixedStepDiscrete', ...
@@ -29,6 +34,10 @@ add_block('simulink/Sources/Constant', [mdl '/Vdc'], ...
     'Position', [30 125 90 145], 'Value', 'ss_cfg.Vdc');
 add_block('simulink/Sources/Constant', [mdl '/DutySampleLimit'], ...
     'Position', [30 160 110 180], 'Value', 'ss_cfg.duty_sample_limit');
+add_block('simulink/Sources/Constant', [mdl '/DeadtimeCompId'], ...
+    'Position', [30 205 120 225], 'Value', 'ss_cfg.deadtime_comp_id_A');
+add_block('simulink/Sources/Constant', [mdl '/DeadtimeCompIq'], ...
+    'Position', [30 240 120 260], 'Value', 'ss_cfg.deadtime_comp_iq_A');
 
 % Symmetric V0/V7 duty generation
 fcn_blk = [mdl '/SymmetricDutyGenerator'];
@@ -39,6 +48,10 @@ add_line(mdl, 'Theta_e_deg/1', 'SymmetricDutyGenerator/1');
 add_line(mdl, 'ModulationRatio/1', 'SymmetricDutyGenerator/2');
 add_line(mdl, 'Vdc/1', 'SymmetricDutyGenerator/3');
 add_line(mdl, 'DutySampleLimit/1', 'SymmetricDutyGenerator/4');
+
+% Reuse the MBD dead-time compensation core as an inserted library block.
+% This harness only adapts scalar validation signals to the module bus.
+local_add_deadtime_compensation_module(mdl, deadtime_comp_module);
 
 % Center-aligned triangular carrier
 add_block('simulink/Sources/Repeating Sequence', [mdl '/TriangleCarrier'], ...
@@ -54,17 +67,17 @@ add_block('simulink/Sources/Constant', [mdl '/DeadTime_const'], ...
     'Position', [360 430 430 450], 'Value', 'ss_cfg.dead_time_s');
 
 % Compare carrier to each duty and add dead time to complementary gates
-local_add_pwm_leg(mdl, 'A', [530 20], 'SymmetricDutyGenerator/1', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
-local_add_pwm_leg(mdl, 'B', [530 125], 'SymmetricDutyGenerator/2', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
-local_add_pwm_leg(mdl, 'C', [530 230], 'SymmetricDutyGenerator/3', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
+local_add_pwm_leg(mdl, 'A', [630 20], 'DeadtimeCompDaOut/1', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
+local_add_pwm_leg(mdl, 'B', [630 125], 'DeadtimeCompDbOut/1', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
+local_add_pwm_leg(mdl, 'C', [630 230], 'DeadtimeCompDcOut/1', 'TriangleCarrier/1', 'DeadTime_const/1', 'Ts_model_const/1');
 
 % Scope: carrier and duty levels
 add_block('simulink/Signal Routing/Mux', [mdl '/MuxCarrierDuty'], ...
     'Position', [360 165 365 255], 'Inputs', '4');
 add_line(mdl, 'TriangleCarrier/1', 'MuxCarrierDuty/1');
-add_line(mdl, 'SymmetricDutyGenerator/1', 'MuxCarrierDuty/2');
-add_line(mdl, 'SymmetricDutyGenerator/2', 'MuxCarrierDuty/3');
-add_line(mdl, 'SymmetricDutyGenerator/3', 'MuxCarrierDuty/4');
+add_line(mdl, 'DeadtimeCompDaOut/1', 'MuxCarrierDuty/2');
+add_line(mdl, 'DeadtimeCompDbOut/1', 'MuxCarrierDuty/3');
+add_line(mdl, 'DeadtimeCompDcOut/1', 'MuxCarrierDuty/4');
 add_block('simulink/Sinks/Scope', [mdl '/CarrierAndDutyScope'], ...
     'Position', [410 165 500 255], 'NumInputPorts', '1');
 add_line(mdl, 'MuxCarrierDuty/1', 'CarrierAndDutyScope/1');
@@ -73,9 +86,9 @@ add_line(mdl, 'MuxCarrierDuty/1', 'CarrierAndDutyScope/1');
 add_block('simulink/Signal Routing/Mux', [mdl '/MuxThetaDuty'], ...
     'Position', [360 285 365 375], 'Inputs', '4');
 add_line(mdl, 'Theta_e_deg/1', 'MuxThetaDuty/1');
-add_line(mdl, 'SymmetricDutyGenerator/1', 'MuxThetaDuty/2');
-add_line(mdl, 'SymmetricDutyGenerator/2', 'MuxThetaDuty/3');
-add_line(mdl, 'SymmetricDutyGenerator/3', 'MuxThetaDuty/4');
+add_line(mdl, 'DeadtimeCompDaOut/1', 'MuxThetaDuty/2');
+add_line(mdl, 'DeadtimeCompDbOut/1', 'MuxThetaDuty/3');
+add_line(mdl, 'DeadtimeCompDcOut/1', 'MuxThetaDuty/4');
 add_block('simulink/Sinks/Scope', [mdl '/ThetaAndDutyScope'], ...
     'Position', [410 285 500 375], 'NumInputPorts', '1');
 add_line(mdl, 'MuxThetaDuty/1', 'ThetaAndDutyScope/1');
@@ -125,7 +138,15 @@ add_block('spsUniversalBridgeLib/Universal Bridge', [mdl '/UniversalBridge'], ..
 add_block('spsPermanentMagnetSynchronousMachineLib/Permanent Magnet Synchronous Machine', [mdl '/PMSM'], ...
     'Position', [1320 0 1410 80], ...
     'MechanicalLoad', 'Speed w', ...
-    'MeasurementBus', 'off');
+    'MeasurementBus', 'off', ...
+    'Resistance', 'ss_cfg.pmsm_resistance_ohm', ...
+    'Inductance', 'ss_cfg.pmsm_inductance_h', ...
+    'dqInductances', '[ss_cfg.pmsm_inductance_h, ss_cfg.pmsm_inductance_h]', ...
+    'Flux', 'ss_cfg.pmsm_flux_wb', ...
+    'PolePairs', 'ss_cfg.pmsm_pole_pairs', ...
+    'Mechanical', 'ss_cfg.pmsm_mechanical', ...
+    'InitialConditions', 'ss_cfg.pmsm_initial_conditions', ...
+    'TsPowergui', 'ss_cfg.powergui_sample_time_s');
 add_block('simulink/Signal Routing/Bus Selector', [mdl '/MachineCurrentSelector'], ...
     'Position', [1495 21 1500 59], ...
     'OutputSignals', 'Stator current is_a (A),Stator current is_b (A),Stator current is_c (A)');
@@ -172,9 +193,9 @@ window_blk = [mdl '/WindowMetrics'];
 add_block('simulink/User-Defined Functions/MATLAB Function', window_blk, ...
     'Position', [470 390 700 500]);
 local_set_window_metrics_script(window_blk);
-add_line(mdl, 'SymmetricDutyGenerator/1', 'WindowMetrics/1');
-add_line(mdl, 'SymmetricDutyGenerator/2', 'WindowMetrics/2');
-add_line(mdl, 'SymmetricDutyGenerator/3', 'WindowMetrics/3');
+add_line(mdl, 'DeadtimeCompDaOut/1', 'WindowMetrics/1');
+add_line(mdl, 'DeadtimeCompDbOut/1', 'WindowMetrics/2');
+add_line(mdl, 'DeadtimeCompDcOut/1', 'WindowMetrics/3');
 add_line(mdl, 'T_pwm_const/1', 'WindowMetrics/4');
 add_line(mdl, 'DeadTime_const/1', 'WindowMetrics/5');
 add_line(mdl, 'Settling_const/1', 'WindowMetrics/6');
@@ -189,6 +210,15 @@ add_line(mdl, 'WindowMetrics/3', 'WindowMetricsScope/3');
 local_add_to_workspace(mdl, 'duty_a', [345 285 435 305], 'SymmetricDutyGenerator/1');
 local_add_to_workspace(mdl, 'duty_b', [345 315 435 335], 'SymmetricDutyGenerator/2');
 local_add_to_workspace(mdl, 'duty_c', [345 345 435 365], 'SymmetricDutyGenerator/3');
+local_add_to_workspace(mdl, 'duty_comp_a', [570 285 675 305], 'DeadtimeCompDaOut/1');
+local_add_to_workspace(mdl, 'duty_comp_b', [570 315 675 335], 'DeadtimeCompDbOut/1');
+local_add_to_workspace(mdl, 'duty_comp_c', [570 345 675 365], 'DeadtimeCompDcOut/1');
+local_add_to_workspace(mdl, 'deadtime_comp_a', [570 375 675 395], 'DeadtimeCompCompAOut/1');
+local_add_to_workspace(mdl, 'deadtime_comp_b', [570 405 675 425], 'DeadtimeCompCompBOut/1');
+local_add_to_workspace(mdl, 'deadtime_comp_c', [570 435 675 455], 'DeadtimeCompCompCOut/1');
+local_add_to_workspace(mdl, 'deadtime_active_a', [570 465 675 485], 'DeadtimeCompActiveAOut/1');
+local_add_to_workspace(mdl, 'deadtime_active_b', [570 495 675 515], 'DeadtimeCompActiveBOut/1');
+local_add_to_workspace(mdl, 'deadtime_active_c', [570 525 675 545], 'DeadtimeCompActiveCOut/1');
 local_add_to_workspace(mdl, 'theta_e_deg', [180 285 270 305], 'Theta_e_deg/1');
 local_add_to_workspace(mdl, 'carrier', [485 285 575 305], 'TriangleCarrier/1');
 local_add_from_block(mdl, 'S_A_low', [770 240 835 260], 'From_S_A_low_log');
@@ -222,6 +252,7 @@ annotation_text = sprintf([ ...
     'SPS stage = bridge + PMSM + powergui\n' ...
     'StopTime = max(sim_stop_time, T_elec)\n' ...
     'dead time inserted in gate logic\n' ...
+    'deadtime compensation current synthesized from id/iq/theta\n' ...
     'dead time = %.2f us\n' ...
     'settle = %.2f us'], ...
     ss_cfg.electrical_freq_hz, 1e3 / ss_cfg.electrical_freq_hz, ss_cfg.modulation_ratio, ss_cfg.f_pwm / 1e3, ...
@@ -233,6 +264,181 @@ top_note.Position = [25 185 285 300];
 
 save_system(mdl);
 
+end
+
+function module = local_prepare_deadtime_compensation_module(ss_cfg)
+script_dir = fileparts(mfilename('fullpath'));
+repo_root = fileparts(fileparts(script_dir));
+module.dir = fullfile(repo_root, 'motor_control_modules');
+module.library = 'motor_control_lib';
+module.libraryFile = fullfile(module.dir, [module.library '.slx']);
+module.dictionaryName = 'motor_control_interface.sldd';
+module.dictionaryFile = fullfile(module.dir, module.dictionaryName);
+
+if ~exist(module.libraryFile, 'file')
+    run(fullfile(module.dir, 'build_motor_control_module_library.m'));
+end
+
+addpath(module.dir);
+local_override_deadtime_compensation_parameters(module.dictionaryFile, ss_cfg);
+local_clear_deadtime_compensation_parameters_from_base();
+load_system(module.libraryFile);
+end
+
+function local_override_deadtime_compensation_parameters(dictionary_file, ss_cfg)
+comp_duty = single(min(ss_cfg.deadtime_comp_gain * ss_cfg.dead_time_s / ss_cfg.T_pwm, ...
+    ss_cfg.deadtime_comp_max_duty));
+
+dd = Simulink.data.dictionary.open(dictionary_file);
+cleanup_dd = onCleanup(@() close(dd));
+design_data = getSection(dd, 'Design Data');
+
+local_set_dictionary_parameter(design_data, 'DeadtimeCompEnable', ...
+    double(logical(ss_cfg.deadtime_comp_enable)), 'T_DeadtimeCompBool');
+local_set_dictionary_parameter(design_data, 'DeadtimeCompDuty', ...
+    double(comp_duty), 'T_DeadtimeCompDuty');
+local_set_dictionary_parameter(design_data, 'DeadtimeCompCurrentZero_A', ...
+    double(single(ss_cfg.deadtime_comp_current_zero_A)), 'T_DeadtimeCompCurrent');
+local_set_dictionary_parameter(design_data, 'DeadtimeCompCurrentFull_A', ...
+    double(single(ss_cfg.deadtime_comp_current_full_A)), 'T_DeadtimeCompCurrent');
+local_set_dictionary_parameter(design_data, 'DeadtimeCompCurrentInvRange_1perA', ...
+    double(single(ss_cfg.deadtime_comp_current_inv_range_1perA)), 'T_DeadtimeCompDuty');
+local_set_dictionary_parameter(design_data, 'DeadtimeCompPolarity', ...
+    double(single(ss_cfg.deadtime_comp_polarity)), 'T_DeadtimeCompDuty');
+
+saveChanges(dd);
+end
+
+function parameter = local_make_parameter(value, data_type)
+parameter = Simulink.Parameter(value);
+parameter.DataType = data_type;
+parameter.CoderInfo.StorageClass = 'Auto';
+end
+
+function local_set_dictionary_parameter(section, name, value, data_type)
+entry = find(section, 'Name', name);
+parameter = local_make_parameter(value, data_type);
+if isempty(entry)
+    addEntry(section, name, parameter);
+else
+    setValue(entry(1), parameter);
+end
+end
+
+function local_clear_deadtime_compensation_parameters_from_base()
+names = { ...
+    'DeadtimeCompEnable', ...
+    'DeadtimeCompDuty', ...
+    'DeadtimeCompCurrentZero_A', ...
+    'DeadtimeCompCurrentFull_A', ...
+    'DeadtimeCompCurrentInvRange_1perA', ...
+    'DeadtimeCompPolarity'};
+
+for idx = 1:numel(names)
+    evalin('base', sprintf('clear(''%s'')', names{idx}));
+end
+end
+
+function local_add_deadtime_compensation_module(mdl, module)
+local_add_deadtime_trig_adapter(mdl);
+
+signal_specs = { ...
+    'Da', 'da', 'SymmetricDutyGenerator/1', 'T_DeadtimeCompDuty', [345 15]; ...
+    'Db', 'db', 'SymmetricDutyGenerator/2', 'T_DeadtimeCompDuty', [345 50]; ...
+    'Dc', 'dc', 'SymmetricDutyGenerator/3', 'T_DeadtimeCompDuty', [345 85]; ...
+    'Id', 'id', 'DeadtimeCompId/1', 'T_DeadtimeCompCurrent', [345 130]; ...
+    'Iq', 'iq', 'DeadtimeCompIq/1', 'T_DeadtimeCompCurrent', [345 165]; ...
+    'SinTheta', 'sin_theta_e', 'DeadtimeCompSinTheta/1', 'T_DeadtimeCompTrig', [345 200]; ...
+    'CosTheta', 'cos_theta_e', 'DeadtimeCompCosTheta/1', 'T_DeadtimeCompTrig', [345 235]};
+
+held_outputs = cell(size(signal_specs, 1), 1);
+for idx = 1:size(signal_specs, 1)
+    held_outputs{idx} = local_add_deadtime_bus_signal_adapter(mdl, ...
+        signal_specs{idx, 1}, signal_specs{idx, 3}, signal_specs{idx, 4}, ...
+        signal_specs{idx, 5});
+end
+
+add_block('simulink/Signal Routing/Bus Creator', [mdl '/DeadtimeCompInputBusCreator'], ...
+    'Position', [500 15 530 260], ...
+    'Inputs', '7', ...
+    'UseBusObject', 'on', ...
+    'BusObject', 'pwm_deadtime_comp_input_t', ...
+    'NonVirtualBus', 'on');
+
+for idx = 1:numel(held_outputs)
+    name_line(add_line(mdl, held_outputs{idx}, ...
+        sprintf('DeadtimeCompInputBusCreator/%d', idx), 'autorouting', 'on'), ...
+        signal_specs{idx, 2});
+end
+
+add_block([module.library '/DeadtimeCompensationStep'], ...
+    [mdl '/DeadtimeCompensationStep'], ...
+    'Position', [575 90 770 180]);
+add_line(mdl, 'DeadtimeCompInputBusCreator/1', 'DeadtimeCompensationStep/1', ...
+    'autorouting', 'on');
+
+add_block('simulink/Signal Routing/Bus Selector', [mdl '/DeadtimeCompOutputSelector'], ...
+    'Position', [815 55 870 260], ...
+    'OutputSignals', 'da,db,dc,comp_a,comp_b,comp_c,active_a,active_b,active_c');
+add_line(mdl, 'DeadtimeCompensationStep/1', 'DeadtimeCompOutputSelector/1', ...
+    'autorouting', 'on');
+
+output_specs = { ...
+    'Da', 'DeadtimeCompOutputSelector/1', 'double', [900 45]; ...
+    'Db', 'DeadtimeCompOutputSelector/2', 'double', [900 80]; ...
+    'Dc', 'DeadtimeCompOutputSelector/3', 'double', [900 115]; ...
+    'CompA', 'DeadtimeCompOutputSelector/4', 'double', [900 150]; ...
+    'CompB', 'DeadtimeCompOutputSelector/5', 'double', [900 185]; ...
+    'CompC', 'DeadtimeCompOutputSelector/6', 'double', [900 220]; ...
+    'ActiveA', 'DeadtimeCompOutputSelector/7', 'double', [900 255]; ...
+    'ActiveB', 'DeadtimeCompOutputSelector/8', 'double', [900 290]; ...
+    'ActiveC', 'DeadtimeCompOutputSelector/9', 'double', [900 325]};
+for idx = 1:size(output_specs, 1)
+    local_add_output_type_adapter(mdl, output_specs{idx, 1}, output_specs{idx, 2}, ...
+        output_specs{idx, 3}, output_specs{idx, 4});
+end
+end
+
+function local_add_deadtime_trig_adapter(mdl)
+add_block('simulink/Math Operations/Gain', [mdl '/DeadtimeCompThetaRad'], ...
+    'Position', [165 260 245 290], ...
+    'Gain', 'pi/180');
+add_line(mdl, 'Theta_e_deg/1', 'DeadtimeCompThetaRad/1', 'autorouting', 'on');
+
+add_block('simulink/Math Operations/Trigonometric Function', [mdl '/DeadtimeCompSinTheta'], ...
+    'Position', [270 240 325 270], ...
+    'Operator', 'sin');
+add_line(mdl, 'DeadtimeCompThetaRad/1', 'DeadtimeCompSinTheta/1', 'autorouting', 'on');
+
+add_block('simulink/Math Operations/Trigonometric Function', [mdl '/DeadtimeCompCosTheta'], ...
+    'Position', [270 285 325 315], ...
+    'Operator', 'cos');
+add_line(mdl, 'DeadtimeCompThetaRad/1', 'DeadtimeCompCosTheta/1', 'autorouting', 'on');
+end
+
+function held_output = local_add_deadtime_bus_signal_adapter(mdl, name, src, data_type, origin)
+convert_name = ['DeadtimeComp' name 'Type'];
+hold_name = ['DeadtimeComp' name 'Hold50us'];
+
+add_block('simulink/Signal Attributes/Data Type Conversion', [mdl '/' convert_name], ...
+    'Position', [origin(1) origin(2) origin(1)+55 origin(2)+25], ...
+    'OutDataTypeStr', data_type);
+add_line(mdl, src, [convert_name '/1'], 'autorouting', 'on');
+
+add_block('simulink/Discrete/Zero-Order Hold', [mdl '/' hold_name], ...
+    'Position', [origin(1)+85 origin(2) origin(1)+140 origin(2)+25], ...
+    'SampleTime', 'ss_cfg.deadtime_comp_update_s');
+add_line(mdl, [convert_name '/1'], [hold_name '/1'], 'autorouting', 'on');
+
+held_output = [hold_name '/1'];
+end
+
+function local_add_output_type_adapter(mdl, name, src, data_type, origin)
+convert_name = ['DeadtimeComp' name 'Out'];
+add_block('simulink/Signal Attributes/Data Type Conversion', [mdl '/' convert_name], ...
+    'Position', [origin(1) origin(2) origin(1)+55 origin(2)+25], ...
+    'OutDataTypeStr', data_type);
+add_line(mdl, src, [convert_name '/1'], 'autorouting', 'on');
 end
 
 function local_set_duty_generator_script(blockPath)
@@ -415,4 +621,8 @@ add_block('simulink/Sinks/To Workspace', blk, ...
     'VariableName', varName, ...
     'SaveFormat', 'Structure With Time');
 add_line(mdl, src, ['ToWs_' varName '/1']);
+end
+
+function name_line(line_handle, signal_name)
+set_param(line_handle, 'Name', signal_name);
 end

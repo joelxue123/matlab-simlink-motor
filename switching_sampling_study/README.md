@@ -48,6 +48,9 @@
 - `run_mcu_sampling_window_study.m`
 	复现 MCU 侧“扇区相关的额外共模偏置/占空比钳位”逻辑，对比处理前后的占空比、低边窗口和平均共模电压。这个脚本最接近 MCU 实际采样窗口策略。
 
+- `run_switching_deadtime_motor_smoke_test.m`
+	构建并短时仿真开关级功率链路：中心对齐 PWM + 50us 更新的 deadtime duty compensation + deadtime 门极、`Universal Bridge` MOSFET/Diodes、SPS `Permanent Magnet Synchronous Machine`。当前 smoke case 使用 `Vdc=12V`、`PWM=20kHz`、`deadtime=500ns`、`R=4ohm`、`L=100uH`，用于确认死区门极真正驱动开关型电机 plant，而不是只做采样窗口公式。模型插入 `../../motor_control_modules/motor_control_lib.slx` 里的 `DeadtimeCompensationStep` 团队复用模块；本目录只做 bus adapter、类型转换、PWM 门极和 plant 验证，不复制死区补偿算法本体。
+
 ### RL 负载与采样误差
 
 - `run_rl_sampling_impact_study.m`
@@ -77,6 +80,9 @@
 
 6. `run_rotating_rl_sampling_study`
 	 最后做整电角度扫描，找到整个周期上的误差热点。
+
+7. `run_switching_deadtime_motor_smoke_test`
+	 最后用开关 MOS + PMSM plant 短时验证死区门极确实进入功率级和电机电流。
 
 如果你想先看 Simulink 模型结构而不是脚本图像，可以先执行：
 
@@ -131,6 +137,50 @@ run_rl_sampling_impact_study
 ```matlab
 run_rotating_rl_sampling_study
 ```
+
+### 8. 看开关 MOS + PMSM 死区 smoke test
+
+```matlab
+run_switching_deadtime_motor_smoke_test
+```
+
+当前通过结果：
+
+```text
+deadtime compensation: enable = 1
+update = 50 us
+compensation duty = 0.01000
+current source = dq_synthesized
+id/iq = [0.0 0.2] A
+current_zero/current_full = [0.02 0.10] A
+polarity = -1
+ia/ib/ic pk-pk = [0.2731 1.1862 1.1045] A
+compensation ranges:
+  a = [-0 9.04e-06]
+  b = [-0.0100 -0.0100]
+  c = [0.0100 0.0100]
+sum current RMS = 0 A
+```
+
+正式 MBD/codegen 模块：
+
+```text
+../../pwm_deadtime_compensation_mbd/
+../../motor_control_modules/motor_control_lib.slx/DeadtimeCompensationStep
+DeadtimeCompensationStep(const pwm_deadtime_comp_input_t *in,
+                         pwm_deadtime_comp_output_t *out)
+```
+
+极性校准历史记录：
+
+```text
+no compensation max phase pk-pk ~= 1.2217 A
+polarity = +1 max phase pk-pk ~= 1.2441 A
+polarity = -1 max phase pk-pk ~= 1.1993 A
+```
+
+上面三行是早期 full-step deadband 补偿下的极性校准基线。当前模型已经改成
+`current_zero/current_full` 平滑补偿，最新 smoke test 数值以上方“当前通过结果”为准。
 
 ## 常用可调参数
 
@@ -274,6 +324,7 @@ run_triangle_carrier_study('thetaEDeg', 20, 'modulationRatio', 0.85)
 
 - 对称 `V0/V7 = 50/50` 占空比生成
 - 中心对齐三角载波
+- 50us 电流符号 deadtime duty compensation 框图子系统
 - 三相比较器
 - 互补低边门极重构
 - 低边窗口度量

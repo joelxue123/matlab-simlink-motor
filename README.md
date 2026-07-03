@@ -1,5 +1,7 @@
 # average-inverter 电机控制起步说明
 
+标签：`[RESEARCH]`，其中部分 `algorithms/*.m` 和 `build_modules/*.m` 仍是过渡实现，不要当作新的交付模块默认模板。
+
 ## 建议的新组织方式
 
 这个项目现在已经开始按“公共库 + 独立实验目录”来整理。

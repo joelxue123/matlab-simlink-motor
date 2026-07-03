@@ -10,6 +10,17 @@ ss_cfg.Vdc = 48;
 ss_cfg.f_pwm = 20e3;
 ss_cfg.T_pwm = 1 / ss_cfg.f_pwm;
 ss_cfg.dead_time_s = 100e-9;
+ss_cfg.deadtime_comp_enable = 0;
+ss_cfg.deadtime_comp_update_s = ss_cfg.T_pwm;
+ss_cfg.deadtime_comp_gain = 1.0;
+ss_cfg.deadtime_comp_polarity = -1.0;
+ss_cfg.deadtime_comp_id_A = 0.0;
+ss_cfg.deadtime_comp_iq_A = 0.2;
+ss_cfg.deadtime_comp_current_zero_A = 0.02;
+ss_cfg.deadtime_comp_current_full_A = 0.10;
+ss_cfg.deadtime_comp_current_inv_range_1perA = ...
+    1 / (ss_cfg.deadtime_comp_current_full_A - ss_cfg.deadtime_comp_current_zero_A);
+ss_cfg.deadtime_comp_max_duty = 0.03;
 
 % Reference settings
 ss_cfg.modulation_ratio = 0.1;
@@ -33,6 +44,12 @@ ss_cfg.rl_rotating_cycles = 1;
 % SPS power-stage settings
 ss_cfg.powergui_sample_time_s = 12.5e-9;
 ss_cfg.pmsm_speed_ref_rad_s = 0.0;
+ss_cfg.pmsm_resistance_ohm = 4.0;
+ss_cfg.pmsm_inductance_h = 100e-6;
+ss_cfg.pmsm_flux_wb = 0.018;
+ss_cfg.pmsm_pole_pairs = 4;
+ss_cfg.pmsm_mechanical = [1.2e-6 1.0e-6 4 0];
+ss_cfg.pmsm_initial_conditions = [0 0 0 0];
 ss_cfg.model_fixed_step_s = min(ss_cfg.T_pwm / ss_cfg.samples_per_pwm_model, ss_cfg.powergui_sample_time_s);
 % First-stage window study uses only dead time and settling time. Trigger
 % offset is reserved for the next step when explicit ADC timing is added.
