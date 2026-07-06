@@ -64,10 +64,10 @@
     }
   ],
   "parameters": [
-    {"name": "CurDKp", "type": "T_GJFloat", "value": 1.52320723148, "unit": "V/A", "storage": "ExportedGlobal", "description": "D-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json."},
-    {"name": "CurDKi", "type": "T_GJFloat", "value": 23812.2981754, "unit": "V/(A*s)", "storage": "ExportedGlobal", "description": "D-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json."},
-    {"name": "CurQKp", "type": "T_GJFloat", "value": 1.52320723148, "unit": "V/A", "storage": "ExportedGlobal", "description": "Q-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json."},
-    {"name": "CurQKi", "type": "T_GJFloat", "value": 23812.2981754, "unit": "V/(A*s)", "storage": "ExportedGlobal", "description": "Q-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json."},
+    {"name": "CurDKp", "type": "T_GJFloat", "value": 1.52320723148, "unit": "V/A", "storage": "ExportedGlobal", "description": "D-axis current-loop proportional gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile."},
+    {"name": "CurDKi", "type": "T_GJFloat", "value": 23812.2981754, "unit": "V/(A*s)", "storage": "ExportedGlobal", "description": "D-axis current-loop integral gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile."},
+    {"name": "CurQKp", "type": "T_GJFloat", "value": 1.52320723148, "unit": "V/A", "storage": "ExportedGlobal", "description": "Q-axis current-loop proportional gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile."},
+    {"name": "CurQKi", "type": "T_GJFloat", "value": 23812.2981754, "unit": "V/(A*s)", "storage": "ExportedGlobal", "description": "Q-axis current-loop integral gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile."},
     {"name": "PiCorrectionGain", "type": "T_GJFloat", "value": 400, "unit": "1/s", "storage": "ExportedGlobal", "description": "Back-calculation anti-windup gain for circular voltage saturation."},
     {"name": "VoltageLimitRatio", "type": "T_GJFloat", "value": 0.577, "unit": "1", "min": 0, "max": 1, "storage": "ExportedGlobal", "description": "SVPWM linear Vdq base limit as a ratio of DC bus voltage. Usable PI voltage limit is VoltageLimitRatio * VoltageModulationRatio * vbus."},
     {"name": "VoltageModulationRatio", "type": "T_GJFloat", "value": 0.9, "unit": "1", "min": 0, "max": 1, "storage": "ExportedGlobal", "description": "Usable fraction of the SVPWM linear base limit. This participates in physical PI voltage saturation and defines the maximum vd_mod/vq_mod magnitude."},

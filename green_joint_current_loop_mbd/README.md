@@ -177,10 +177,15 @@ matlab -batch "run('matlab-practice/green_joint_current_loop_mbd/run_green_joint
 matlab -batch "run('matlab-practice/green_joint_current_loop_mbd/generate_green_joint_current_loop_code.m')"
 ```
 
-`run_green_joint_current_loop_smoke_test.m` also checks that the generated
-interface defaults still match `green-joint/Module/Config/green_joint_1615_config.json`.
-This prevents `interface.json`, `.sldd`, and firmware variant defaults from
-quietly drifting apart.
+`run_green_joint_current_loop_smoke_test.m` also checks that both runtime
+profile contracts (`green_joint_1615_config.json` and
+`green_joint_1620_config.json`) exist and contain the current-loop fields used
+by the generated code. The generated algorithm supports runtime profile values
+applied by the `jointboard_mh3p0` common firmware; `pmotor.motor_type` selects
+the 1615 or 1620 profile, and invalid Flash falls back to 1620. The optional
+`GJ_MBD_CONTRACT_PROFILE` environment variable selects which profile the
+checked source defaults are expected to match when regenerating/checking the
+MBD contract.
 
 `generate_green_joint_current_loop_code.m` also runs:
 
@@ -195,7 +200,9 @@ Current status:
 
 ```text
 Smoke test passed.
-Smoke test verifies green_joint_1615 variant current-loop defaults.
+Smoke test verifies the jointboard_mh3p0 runtime profile contract surface for
+1615 and 1620; firmware applies the runtime profile values and falls back to
+1620 when Flash is invalid.
 ERT code generation passed.
 Generated interface has no duty/sector/Clarke/Park fields.
 Voltage allocation is Vd-priority: Vq only uses the voltage remaining after Vd.

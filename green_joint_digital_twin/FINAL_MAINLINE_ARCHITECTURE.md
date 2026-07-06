@@ -57,6 +57,19 @@ physical-domain gains and current-domain gains
 temporary study model and production MBD source
 ```
 
+## 固件命名和运行时 profile
+
+MH3.0 APP 固件现在是公共 APP：
+
+```text
+jointboard_mh3p0
+```
+
+不再把 APP 固件拆成两个 per-motor 目标。运行时由 Flash 参数
+`pmotor.motor_type` 选择 1615 或 1620 profile；Flash 无效时固件默认回退
+到 1620 profile。MBD 脚本和文档可以继续显式标注 1615/1620 作为 plant、
+识别结果或测试 profile，但不能把它写成必须刷写不同 APP 固件。
+
 ## 唯一权威参数源
 
 长期权威参数入口是 machine-readable variant contract：
@@ -65,6 +78,9 @@ temporary study model and production MBD source
 green-joint/Module/Config/green_joint_1615_config.json
 green-joint/Module/Config/green_joint_1620_config.json
 ```
+
+这些是 `jointboard_mh3p0` common firmware 的 runtime profile 合同，不是
+两个独立 APP 固件目标。
 
 这些文件派生到：
 

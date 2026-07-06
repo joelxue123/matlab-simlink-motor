@@ -11,7 +11,10 @@ run(fullfile(script_dir, 'build_green_joint_current_loop_model.m'));
 
 contract = evalin('base', 'green_joint_current_loop_contract');
 model = contract.model;
-verify_contract_matches_firmware_variant(contract, script_dir, '1615');
+runtime_profiles = {'1615', '1620'};
+verify_runtime_profiles_exist(script_dir, runtime_profiles);
+contract_profile = get_contract_profile('1615', runtime_profiles);
+verify_contract_matches_firmware_variant(contract, script_dir, contract_profile);
 
 load_system(fullfile(script_dir, [model '.slx']));
 set_param(model, 'SimulationCommand', 'update');
@@ -28,20 +31,21 @@ fprintf('  model      = %s\n', model);
 fprintf('  dictionary = %s\n', contract.dictionary);
 fprintf('  input bus  = %s\n', contract.buses{1}.name);
 fprintf('  output bus = %s\n', contract.buses{2}.name);
-fprintf('  variant    = green_joint_1615 current-loop defaults\n');
+fprintf('  app fw     = jointboard_mh3p0 common firmware\n');
+fprintf('  profiles   = %s runtime profiles; pmotor.motor_type selects profile, invalid Flash falls back to 1620\n', ...
+    strjoin(runtime_profiles, '/'));
+fprintf('  defaults   = green_joint_%s current-loop contract values; firmware applies runtime profile values\n', ...
+    contract_profile);
 fprintf('Green-joint current-loop MBD smoke test passed.\n');
 
-function verify_contract_matches_firmware_variant(contract, script_dir, motor_type)
-repo_dir = fileparts(script_dir);
-workspace_dir = fileparts(repo_dir);
-firmware_dir = fullfile(workspace_dir, 'green-joint');
-config_file = fullfile(firmware_dir, 'Module', 'Config', ...
-    ['green_joint_' motor_type '_config.json']);
-if ~exist(config_file, 'file')
-    error('Missing firmware variant contract: %s', config_file);
+function verify_runtime_profiles_exist(script_dir, runtime_profiles)
+for i = 1:numel(runtime_profiles)
+    load_firmware_variant_config(script_dir, runtime_profiles{i});
+end
 end
 
-cfg = jsondecode(fileread(config_file));
+function verify_contract_matches_firmware_variant(contract, script_dir, motor_type)
+cfg = load_firmware_variant_config(script_dir, motor_type);
 assert_close(contract.sample_time_s, cfg.current_loop.sample_time_s, ...
     1e-12, 'sample_time_s');
 assert_param(contract, 'CurDKp', cfg.current_loop.cur_d_kp, 1e-9);
@@ -54,6 +58,40 @@ assert_param(contract, 'VoltageLimitRatio', ...
     cfg.current_loop.voltage_limit_ratio, 1e-9);
 assert_param(contract, 'VoltageModulationRatio', ...
     cfg.current_loop.voltage_modulation_ratio, 1e-9);
+end
+
+function cfg = load_firmware_variant_config(script_dir, motor_type)
+repo_dir = fileparts(script_dir);
+workspace_dir = fileparts(repo_dir);
+firmware_dir = fullfile(workspace_dir, 'green-joint');
+config_file = fullfile(firmware_dir, 'Module', 'Config', ...
+    ['green_joint_' char(motor_type) '_config.json']);
+if ~exist(config_file, 'file')
+    error('Missing firmware runtime profile contract: %s', config_file);
+end
+
+cfg = jsondecode(fileread(config_file));
+required_fields = {'sample_time_s', 'cur_d_kp', 'cur_d_ki', 'cur_q_kp', ...
+    'cur_q_ki', 'pi_correction_gain', 'voltage_limit_ratio', ...
+    'voltage_modulation_ratio'};
+for i = 1:numel(required_fields)
+    if ~isfield(cfg.current_loop, required_fields{i})
+        error('Missing current-loop field "%s" in runtime profile %s.', ...
+            required_fields{i}, char(motor_type));
+    end
+end
+end
+
+function contract_profile = get_contract_profile(default_profile, runtime_profiles)
+contract_profile = getenv('GJ_MBD_CONTRACT_PROFILE');
+if isempty(contract_profile)
+    contract_profile = default_profile;
+end
+
+if ~any(strcmp(contract_profile, runtime_profiles))
+    error('GJ_MBD_CONTRACT_PROFILE must be one of: %s.', ...
+        strjoin(runtime_profiles, ', '));
+end
 end
 
 function assert_param(contract, name, expected, tolerance)

@@ -13,6 +13,11 @@ FINAL_MAINLINE_ARCHITECTURE.md
 该文件定义第一原理物理边界、variant 合同、MBD 模块权威源、生成代码落点、
 统一 test harness 和禁止事项。后续不要绕过这份主线约定新建孤岛模型。
 
+MH3.0 固件侧 APP 名称是 `jointboard_mh3p0` common firmware。运行时由
+Flash 参数 `pmotor.motor_type` 选择 1615 或 1620 profile；Flash 无效时默认
+回退 1620。本文中的 1615/1620 名称表示 plant、参数或测试 profile，不表示
+必须刷写两个 per-motor APP 固件。
+
 ## 主线纪律
 
 本目录后续按统一主线推进，不再默认新建孤岛模型：
@@ -991,7 +996,8 @@ L_phase = L_line_to_line / 2
 
 旧固件中的无量纲参数只能作为对照和反推依据，不作为数字孪生长期接口。
 
-当前固件侧 MBD adapter 默认参数来自当前编译 variant：
+当前固件侧 MBD adapter 参数由 `jointboard_mh3p0` common firmware 在运行时
+按 Flash `pmotor.motor_type` 应用；Flash 无效时使用 1620 fallback：
 
 ```text
 green-joint/Module/Config/green_joint_1615_config.json

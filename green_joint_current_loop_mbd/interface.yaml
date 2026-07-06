@@ -106,28 +106,28 @@ parameters:
     value: 1.52320723148
     unit: V/A
     storage: ExportedGlobal
-    description: D-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json.
+    description: D-axis current-loop proportional gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile.
 
   - name: CurDKi
     type: T_GJFloat
     value: 23812.2981754
     unit: V/(A*s)
     storage: ExportedGlobal
-    description: D-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json.
+    description: D-axis current-loop integral gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile.
 
   - name: CurQKp
     type: T_GJFloat
     value: 1.52320723148
     unit: V/A
     storage: ExportedGlobal
-    description: Q-axis current-loop proportional gain. Default contract tracks green_joint_1615_config.json.
+    description: Q-axis current-loop proportional gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile.
 
   - name: CurQKi
     type: T_GJFloat
     value: 23812.2981754
     unit: V/(A*s)
     storage: ExportedGlobal
-    description: Q-axis current-loop integral gain. Default contract tracks green_joint_1615_config.json.
+    description: Q-axis current-loop integral gain. Generated code supports runtime profile values applied by jointboard_mh3p0 common firmware; invalid Flash falls back to the 1620 profile.
 
   - name: PiCorrectionGain
     type: T_GJFloat
